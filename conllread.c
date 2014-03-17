@@ -37,7 +37,7 @@ void print_FeaturedSentence(FeaturedSentence sent){
 	
 }
 
-int main(int argc, char **argv)
+int __main(int argc, char **argv)
 {
 	
 	DArray *sect = range(2,5);	//range(2,22);

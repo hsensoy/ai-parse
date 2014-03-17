@@ -20,7 +20,7 @@
  * @return DArray containing all integers [start, end )
  */
 DArray* range(int start, int end);
-DArray* parse_range(char *rangestr);
+DArray* parse_range(const char *rangestr);
 
 void print_range(const char *promt, DArray* range);
 char* join_range(DArray *range);

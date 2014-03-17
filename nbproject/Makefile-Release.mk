@@ -35,19 +35,22 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
+	${OBJECTDIR}/ai-parse.o \
+	${OBJECTDIR}/argparse.o \
 	${OBJECTDIR}/conllread.o \
 	${OBJECTDIR}/corpus.o \
 	${OBJECTDIR}/darray.o \
 	${OBJECTDIR}/dependency.o \
 	${OBJECTDIR}/hashmap.o \
 	${OBJECTDIR}/memman.o \
+	${OBJECTDIR}/parseutil.o \
 	${OBJECTDIR}/stringalgo.o \
 	${OBJECTDIR}/util.o \
 	${OBJECTDIR}/vector.o
 
 
 # C Compiler Flags
-CFLAGS=
+CFLAGS=-DNDEBUG
 
 # CC Compiler Flags
 CCFLAGS=
@@ -70,50 +73,65 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ai-parse: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ai-parse ${OBJECTFILES} ${LDLIBSOPTIONS}
 
+${OBJECTDIR}/ai-parse.o: ai-parse.c 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -O3 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ai-parse.o ai-parse.c
+
+${OBJECTDIR}/argparse.o: argparse.c 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -O3 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/argparse.o argparse.c
+
 ${OBJECTDIR}/conllread.o: conllread.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/conllread.o conllread.c
+	$(COMPILE.c) -O3 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/conllread.o conllread.c
 
 ${OBJECTDIR}/corpus.o: corpus.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/corpus.o corpus.c
+	$(COMPILE.c) -O3 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/corpus.o corpus.c
 
 ${OBJECTDIR}/darray.o: darray.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/darray.o darray.c
+	$(COMPILE.c) -O3 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/darray.o darray.c
 
 ${OBJECTDIR}/dependency.o: dependency.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/dependency.o dependency.c
+	$(COMPILE.c) -O3 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/dependency.o dependency.c
 
 ${OBJECTDIR}/hashmap.o: hashmap.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/hashmap.o hashmap.c
+	$(COMPILE.c) -O3 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/hashmap.o hashmap.c
 
 ${OBJECTDIR}/memman.o: memman.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/memman.o memman.c
+	$(COMPILE.c) -O3 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/memman.o memman.c
+
+${OBJECTDIR}/parseutil.o: parseutil.c 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -O3 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/parseutil.o parseutil.c
 
 ${OBJECTDIR}/stringalgo.o: stringalgo.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/stringalgo.o stringalgo.c
+	$(COMPILE.c) -O3 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/stringalgo.o stringalgo.c
 
 ${OBJECTDIR}/util.o: util.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/util.o util.c
+	$(COMPILE.c) -O3 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/util.o util.c
 
 ${OBJECTDIR}/vector.o: vector.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/vector.o vector.c
+	$(COMPILE.c) -O3 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/vector.o vector.c
 
 # Subprojects
 .build-subprojects:

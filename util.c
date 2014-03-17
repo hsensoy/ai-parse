@@ -32,7 +32,7 @@ error:
     exit(1);
 }
 
-DArray* parse_range(char *rangestr){
+DArray* parse_range(const char *rangestr){
     DArray *result = DArray_create(sizeof(int), 1);
     check_mem(result);
     

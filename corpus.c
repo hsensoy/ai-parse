@@ -271,7 +271,7 @@ void set_FeatureMatrix(Hashmap* featuremap, CoNLLCorpus corpus, int sentence_idx
     int length = sentence->length;
 
     if (corpus->feature_matrix_singleton->size < length){
-        log_info( "Singleton Matrix is too small (%d) for a sentence length of (%d). Growing...", corpus->feature_matrix_singleton->size, length);
+        log_info( "REALLOC: Singleton Matrix is too small (%d) for a sentence length of (%d)", corpus->feature_matrix_singleton->size, length);
     
         free_featureMatrix(corpus->feature_matrix_singleton);
         

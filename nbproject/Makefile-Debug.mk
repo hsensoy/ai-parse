@@ -35,12 +35,15 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
+	${OBJECTDIR}/ai-parse.o \
+	${OBJECTDIR}/argparse.o \
 	${OBJECTDIR}/conllread.o \
 	${OBJECTDIR}/corpus.o \
 	${OBJECTDIR}/darray.o \
 	${OBJECTDIR}/dependency.o \
 	${OBJECTDIR}/hashmap.o \
 	${OBJECTDIR}/memman.o \
+	${OBJECTDIR}/parseutil.o \
 	${OBJECTDIR}/stringalgo.o \
 	${OBJECTDIR}/util.o \
 	${OBJECTDIR}/vector.o
@@ -69,6 +72,16 @@ LDLIBSOPTIONS=
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ai-parse: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ai-parse ${OBJECTFILES} ${LDLIBSOPTIONS}
+
+${OBJECTDIR}/ai-parse.o: ai-parse.c 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ai-parse.o ai-parse.c
+
+${OBJECTDIR}/argparse.o: argparse.c 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/argparse.o argparse.c
 
 ${OBJECTDIR}/conllread.o: conllread.c 
 	${MKDIR} -p ${OBJECTDIR}
@@ -99,6 +112,11 @@ ${OBJECTDIR}/memman.o: memman.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/memman.o memman.c
+
+${OBJECTDIR}/parseutil.o: parseutil.c 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/parseutil.o parseutil.c
 
 ${OBJECTDIR}/stringalgo.o: stringalgo.c 
 	${MKDIR} -p ${OBJECTDIR}

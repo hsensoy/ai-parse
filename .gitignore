@@ -1,3 +1,5 @@
 # Intermediate files
 *.o
 *.d
+
+dist
