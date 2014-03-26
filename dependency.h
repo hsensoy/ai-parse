@@ -71,6 +71,9 @@ struct PerceptronModel{
     vector embedding_w;
     vector embedding_w_avg;
     vector embedding_w_temp;
+    vector embedding_w_best;
+    
+    int best_numit;
 	
     int c;
 
@@ -96,12 +99,23 @@ uint32_t feature_hash(void *f);
 PerceptronModel PerceptronModel_create( CoNLLCorpus training, IntegerIndexedFeatures iif );
 void PerceptronModel_free(PerceptronModel model);
 
-void train_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, int numit);
-void train_perceptron_once(PerceptronModel mdl, const CoNLLCorpus corpus);
+void train_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, int numit, int max_rec);
+void train_perceptron_once(PerceptronModel mdl, const CoNLLCorpus corpus, int max_rec);
 double test_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, bool exclude_punct, bool use_temp);
 
 void fill_features(Hashmap *featuremap, DArray *farr, int from, int to, FeaturedSentence sentence);
 void parse_and_dump(PerceptronModel mdl, FILE *fp, CoNLLCorpus corpus);
+
+/**
+ * 
+ * @param fp File pointer of model file
+ * @param edimension Word embedding dimensions
+ * @param epattern Embedding patterns
+ * @param w Weight vector to be stored
+ * @param best_numit Number of iterations for best performance.
+ * @param transformation LINEAR|QUADRATIC transformation to be used.
+ */
+void dump_model(FILE *fp, int edimension, const char *epattern, vector w,int best_numit,enum EmbeddingTranformation transformation);
 
 
 #endif

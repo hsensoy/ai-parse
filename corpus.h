@@ -52,7 +52,7 @@ struct FeatureMatrix{
 
 typedef  struct FeatureMatrix* FeatureMatrix;
 
-FeatureVector FeatureVector_create(bool has_discrete_features, uint32_t embedding_length);
+FeatureMatrix FeatureMatrix_create(int sent_length, uint32_t embedding_length, bool has_discrete_features);
 
 struct FeaturedSentence {
     uint8_t section;
@@ -95,13 +95,9 @@ struct CoNLLCorpus {
     DArray *disrete_patterns_parts;
 
     Word Root;
-    size_t embedding_length;
+    size_t word_embedding_dimension;
     size_t transformed_embedding_length;
     
-    /**
-     * Create a feature matrix of length 300 to guarantee all sentence length with high probability.
-     */
-    FeatureMatrix feature_matrix_singleton;
     enum EmbeddingTranformation embedding_transform;
 };
 
@@ -109,9 +105,10 @@ typedef struct CoNLLCorpus* CoNLLCorpus;
 
 
 
-CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, const char *embedding_pattern, enum EmbeddingTranformation transform, DArray* discrete_patterns);
+CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embedding_dimension, const char *embedding_pattern, enum EmbeddingTranformation transform, DArray* discrete_patterns) ;
 void read_corpus(CoNLLCorpus coprus, bool build_feature_matrix);
-void free_CoNLLCorpus(CoNLLCorpus corpus);
+
+void free_CoNLLCorpus(CoNLLCorpus corpus, bool free_feature_matrix);
 
 
 
@@ -127,8 +124,13 @@ void FeatureSentence_free(FeaturedSentence sent, bool free_words);
  * @param sentence_idx Sentence for which feature matrix is built.
  */
 void set_FeatureMatrix(Hashmap* featuremap, CoNLLCorpus corpus, int sentence_idx);
+void free_featureMatrix(FeatureMatrix matrix);
+
+
 void free_feature_matrix(CoNLLCorpus corpus, int sentence_idx);
 
 void build_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, vector embeddings_w, vector discrete_w);
+
+void free_FeaturedSentence(CoNLLCorpus corpus, int sentence_idx);
 
 #endif

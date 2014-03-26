@@ -604,6 +604,7 @@ PerceptronModel PerceptronModel_create(CoNLLCorpus training, IntegerIndexedFeatu
         model->embedding_w = vector_create(training->transformed_embedding_length);
         model->embedding_w_avg = vector_create(training->transformed_embedding_length);
         model->embedding_w_temp = vector_create(training->transformed_embedding_length);
+        model->embedding_w_best = vector_create(training->transformed_embedding_length);
 
         log_info("Embedding features of %ld dimension", model->embedding_w->true_n);
     } else {
@@ -641,6 +642,7 @@ void PerceptronModel_free(PerceptronModel model) {
         vector_free(model->embedding_w);
         vector_free(model->embedding_w_avg);
         vector_free(model->embedding_w_temp);
+        vector_free(model->embedding_w_best);
     }
 }
 
@@ -682,21 +684,27 @@ double dsecnd(){
     return 0.0;
 }
 
-void train_perceptron_once(PerceptronModel mdl, const CoNLLCorpus corpus) {
+void train_perceptron_once(PerceptronModel mdl, const CoNLLCorpus corpus, int max_rec) {
     long match = 0, total = 0;
     //size_t slen=0;
 
     double s_initial =  dsecnd();
-    for (int si = 0; si < DArray_count(corpus->sentences); si++) {
+    
+    
+    log_info("Total number of training instances %d",(max_rec == -1)? DArray_count(corpus->sentences):max_rec);
+    for (int si = 0; si < ((max_rec == -1)? DArray_count(corpus->sentences):max_rec); si++) {
         //log_info("Parsing sentence %d/%d", si+1, DArray_count(corpus));
+        debug("Sentence %d",si);
         FeaturedSentence sent = (FeaturedSentence) DArray_get(corpus->sentences, si);
+        
 
         debug("Building feature matrix for sentence %d", si);
         set_FeatureMatrix(NULL, corpus, si);
+        
 
         //printfembedding(sent->feature_matrix, sent->length);
 
-        debug("Building adjacency matrix for sentence %d", si);
+        debug("Building adjacency matrix for sentence %d of length %d", si, sent->length);
         build_adjacency_matrix(corpus, si, mdl->embedding_w, NULL);
 
         //printfmatrix(sent->adjacency_matrix, sent->length);
@@ -834,13 +842,35 @@ error:
     exit(1);
 }
 
-void train_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, int numit) {
+void dump_model(FILE *fp, int edimension, const char *epattern, vector w, int best_numit, enum EmbeddingTranformation transformation){
+    
+    fprintf(fp, "edimension=%d\n",edimension);
+    fprintf(fp, "epattern=%s\n",epattern);
+    fprintf(fp, "bestnumit=%d\n",best_numit);
+    
+    switch(transformation){
+        case LINEAR:
+            fprintf(fp, "transformation=LINEAR\n");
+            break;
+        case QUADRATIC:
+            fprintf(fp, "transformation=QUADRATIC\n");
+            break;
+    }
+    
+    fprintf(fp, "dimension=%d\n",w->true_n);
+    
+    for(int i = 0 ;i < w->true_n;i++){
+        fprintf(fp, "%d=%f\n",i, w->data[i]);
+    }
+}
+
+void train_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, int numit, int max_rec) {
 
     for (int n = 0; n < numit; n++) {
 
         log_info("%d iteration in parser training...", (n + 1));
 
-        train_perceptron_once(mdl, corpus);
+        train_perceptron_once(mdl, corpus,max_rec);
     }
 
     if (corpus->disrete_patterns_parts)
@@ -919,6 +949,8 @@ double test_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, boo
                 total++;
             }
         }
+        
+        free(model);
 
 
         debug("Releasing feature matrix for sentence %d", si);

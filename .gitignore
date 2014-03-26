@@ -3,3 +3,6 @@
 *.d
 
 dist
+
+# Model files
+*.model

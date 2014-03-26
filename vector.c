@@ -190,7 +190,7 @@ vector vquadratic(vector target, vector src, float d) {
         return vquad;
     } else {
 
-        /*
+        
         for (int i = 0; i < src->true_n; i++) {
             target->data[vquad_indx++] = src->data[i] * src->data[i];
 
@@ -205,28 +205,7 @@ vector vquadratic(vector target, vector src, float d) {
 
             target->data[vquad_indx++] = sqrt_of_2d * src->data[i];
         }
-         */
-        
-       float *t = target->data;
-       float *s = src->data;
-        
-       #pragma ivdep 
-       #pragma vector aligned
-       for (int i = 0; i < src->true_n; i++) {
-            t[i] = s[i] * s[i];
-            t[i +  src->true_n] = sqrt_of_2d * s[i];
-       }
-       
-       vquad_indx = 2 * src->true_n;
-       
-       for (int i = 0; i < src->true_n; i++) {
-
-            for (int j = i + 1; j < src->true_n; j++) {
-                t[vquad_indx++] = sqrt_of_2 * s[i] * s[j];
-            }
-            
-        }
-
+         
         vector_free(src);
 
         return target;
