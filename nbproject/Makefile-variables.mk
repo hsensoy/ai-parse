@@ -22,6 +22,14 @@ CND_ARTIFACT_PATH_Release=dist/Release/GNU-MacOSX/ai-parse
 CND_PACKAGE_DIR_Release=dist/Release/GNU-MacOSX/package
 CND_PACKAGE_NAME_Release=ai-parse.tar
 CND_PACKAGE_PATH_Release=dist/Release/GNU-MacOSX/package/ai-parse.tar
+# Release-Linux configuration
+CND_PLATFORM_Release-Linux=GNU-Linux-x86
+CND_ARTIFACT_DIR_Release-Linux=dist/Release-Linux/GNU-Linux-x86
+CND_ARTIFACT_NAME_Release-Linux=ai-parse
+CND_ARTIFACT_PATH_Release-Linux=dist/Release-Linux/GNU-Linux-x86/ai-parse
+CND_PACKAGE_DIR_Release-Linux=dist/Release-Linux/GNU-Linux-x86/package
+CND_PACKAGE_NAME_Release-Linux=ai-parse.tar
+CND_PACKAGE_PATH_Release-Linux=dist/Release-Linux/GNU-Linux-x86/package/ai-parse.tar
 #
 # include compiler specific variables
 #

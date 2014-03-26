@@ -4,6 +4,10 @@
 #include "dependency.h"
 #include <stdbool.h>
 
+#ifdef __GNUC__
+#include <signal.h>
+#endif
+
 static bool keepRunning = true;
 
 void intHandler(int dummy) {

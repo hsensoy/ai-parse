@@ -12,6 +12,11 @@
 
 #include "debug.h"
 #include "dependency.h"
+#include <string.h>
+
+#ifdef __GNUC__
+#include <sys/types.h>
+#endif
 
 Word Root = NULL;
 
