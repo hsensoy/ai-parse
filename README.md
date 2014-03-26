@@ -97,6 +97,76 @@ dist/Release/GNU-MacOSX/ai-parse -s optimize -p $CONLL_PATH -l 50 -e p-1v_p0v_p1
 
 [^]: 3 is hard coded as a constant for today and may be parametrised in the future.
 
+ConLLCorpus Creation with Word Embeddings
+==========================================
+Before performing parsing experiments using `ai-parse` CoNLL corpus is expected to be enriched with word embeddings. 
+
+We do this by adding a 11th column into standard ConLL file format for word embedding. Just like other attributes of a CoNLL record 11th column is separated by `<TAB>` character. Each dimension of embeddings are separated by a single space character.
+
+Although `ai-parse` does not depend on process generating the replica of original CoNLL corpus with embeddings, `scripts/enrich_with_embeddings.py` provides a way of easily generating a CoNLL replica given an embeddings lookup file.
+
+```
+$ python scripts/enrich_with_embeddings.py --help
+usage: enrich_with_embeddings.py [-h] [--delimiter DELIMITER]
+                                 [--offset OFFSET] [--unk_as_default]
+                                 [--token] [--unk_key UNK_KEY]
+                                 [--length LENGTH]
+                                 embeddings_file src target
+
+Create a clone of CoNLL corpus by adding given embeddings
+
+positional arguments:
+  embeddings_file       Delimited embedding file first token to be word others
+                        to be the embedding dimensions
+  src                   Root directory of CoNLL corpus to be used as source
+  target                Root directory of CoNLL corpus to be used as target
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --delimiter DELIMITER
+                        File delimiter. Default is <TAB>
+  --offset OFFSET       Starting offset of embedding token. Default: 1
+  --unk_as_default      Use <unk> embedding as the default embedding.
+                        Otherwise 0 embedding is used
+  --token               Token based embeddings instead of type based
+                        embeddings
+  --unk_key UNK_KEY     UNK key to be used to replace unknown words
+  --length LENGTH       Expected length of embeddings
+
+python scripts/enrich_with_embeddings.py best-dis+om.enw.type.gz conll
+conll_scode
+```
+
+### Options
+
+``--delimiter`` is an option to define the dimension delimiter in `embeddings_file`.
+
+``--offset`` is an option to define the starting offset of embeddings data. To be more precise given a row in `embeddings_file` delimited by `--delimiter`. First embedding dimension is pythonized by `row.split(--delimiter)[--offset]`.
+
+``--unk_as_default`` is a boolean option to decide on embeddings of _unknown_ words. If option is set embedding for `--unk_key` in `embeddings_file` will be used. Otherwise a zero vector will be used.
+
+``--token`` is another boolean option to decide `embeddings_file` format
+
+* Option is set: This means that `embeddings_file` has token based format and there is a line for each line in ConLL corpus(order by section, filename). Any mismatch in word in `embeddings_file` line and corpus file line will cause an error.
+* Option is not set: This means that `embeddings_file` has type based format and a Python dictionary will be constructed using the file and will be used to enrich CoNLL corpus.
+
+`--unk_key` Refer to `--unk_as_default` option.
+
+`--length` Expected dimension of embeddings vector in `embeddings_file`
+
+### Positional Parameters
+
+`embeddings_file` is the file (`.gz` is supported) either in _token_ or _type_ format. Refer to `--token` for more details.
+
+`src` is the source CoNLL directory with 10 column corpus files. All subdirectories (section directories) will be read iteratively and enriched by given embeddings.
+
+`target` is the target CoNLL directory to be created (if necessary ) by the script. All enriched sentences are written into this directory with section subdirectories.
+
+
+
+
+
+
 
 
 	
