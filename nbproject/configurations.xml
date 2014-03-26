@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="90">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <logicalFolder name="HeaderFiles"
+                   displayName="Header Files"
+                   projectFiles="true">
+      <itemPath>argparse.h</itemPath>
+      <itemPath>corpus.h</itemPath>
+      <itemPath>darray.h</itemPath>
+      <itemPath>datastructure.h</itemPath>
+      <itemPath>debug.h</itemPath>
+      <itemPath>dependency.h</itemPath>
+      <itemPath>hashmap.h</itemPath>
+      <itemPath>memman.h</itemPath>
+      <itemPath>minunit.h</itemPath>
+      <itemPath>parseutil.h</itemPath>
+      <itemPath>stringalgo.h</itemPath>
+      <itemPath>util.h</itemPath>
+      <itemPath>vector.h</itemPath>
+    </logicalFolder>
+    <logicalFolder name="ResourceFiles"
+                   displayName="Resource Files"
+                   projectFiles="true">
+    </logicalFolder>
+    <logicalFolder name="SourceFiles"
+                   displayName="Source Files"
+                   projectFiles="true">
+      <itemPath>ai-parse.c</itemPath>
+      <itemPath>argparse.c</itemPath>
+      <itemPath>conllread.c</itemPath>
+      <itemPath>corpus.c</itemPath>
+      <itemPath>darray.c</itemPath>
+      <itemPath>dependency.c</itemPath>
+      <itemPath>hashmap.c</itemPath>
+      <itemPath>memman.c</itemPath>
+      <itemPath>parseutil.c</itemPath>
+      <itemPath>stringalgo.c</itemPath>
+      <itemPath>util.c</itemPath>
+      <itemPath>vector.c</itemPath>
+    </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false">
+      <itemPath>Makefile</itemPath>
+    </logicalFolder>
+  </logicalFolder>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="Debug" type="1">
+      <toolsSet>
+        <compilerSet>default</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <compileType>
+      </compileType>
+      <item path="ai-parse.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="argparse.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="argparse.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="conllread.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="corpus.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="corpus.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="darray.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="darray.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="datastructure.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="debug.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="dependency.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="dependency.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="hashmap.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="hashmap.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="memman.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="memman.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="minunit.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="parseutil.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="parseutil.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="stringalgo.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="stringalgo.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="util.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="util.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="vector.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="vector.h" ex="false" tool="3" flavor2="0">
+      </item>
+    </conf>
+    <conf name="Release" type="1">
+      <toolsSet>
+        <compilerSet>default</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <compileType>
+        <cTool>
+          <developmentMode>6</developmentMode>
+          <commandLine>-DNDEBUG</commandLine>
+          <warningLevel>2</warningLevel>
+        </cTool>
+        <ccTool>
+          <developmentMode>5</developmentMode>
+        </ccTool>
+        <fortranCompilerTool>
+          <developmentMode>5</developmentMode>
+        </fortranCompilerTool>
+        <asmTool>
+          <developmentMode>5</developmentMode>
+        </asmTool>
+      </compileType>
+      <item path="ai-parse.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="argparse.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="argparse.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="conllread.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="corpus.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="corpus.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="darray.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="darray.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="datastructure.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="debug.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="dependency.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="dependency.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="hashmap.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="hashmap.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="memman.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="memman.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="minunit.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="parseutil.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="parseutil.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="stringalgo.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="stringalgo.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="util.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="util.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="vector.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="vector.h" ex="false" tool="3" flavor2="0">
+      </item>
+    </conf>
+    <conf name="Release-Linux" type="1">
+      <toolsSet>
+        <compilerSet>GNU|GNU</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <compileType>
+        <cTool>
+          <developmentMode>6</developmentMode>
+          <architecture>2</architecture>
+          <standard>3</standard>
+          <warningLevel>2</warningLevel>
+        </cTool>
+        <linkerTool>
+          <commandLine>-lm</commandLine>
+        </linkerTool>
+      </compileType>
+      <item path="ai-parse.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="argparse.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="argparse.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="conllread.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="corpus.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="corpus.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="darray.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="darray.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="datastructure.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="debug.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="dependency.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="dependency.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="hashmap.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="hashmap.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="memman.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="memman.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="minunit.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="parseutil.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="parseutil.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="stringalgo.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="stringalgo.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="util.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="util.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="vector.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="vector.h" ex="false" tool="3" flavor2="0">
+      </item>
+    </conf>
+  </confs>
+</configurationDescriptor>

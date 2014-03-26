@@ -1,0 +1,8 @@
+# Intermediate files
+*.o
+*.d
+
+dist
+
+# Model files
+*.model
