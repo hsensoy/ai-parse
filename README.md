@@ -55,6 +55,43 @@ Refer to `scripts/enrich.py` to create clones of original ConLL directory enrich
 
 `-d` is used to set sections to be used as the development set when _optimize_ stage is used. Valid format for the option is the format used for `-t` option.
 
+`-e` is used to define an embedding pattern to be used as an input in arc scoring (assign a score for a potential arc from a word (**p**arent) to another one (**c**hild) ) for Eisner's algorithm. Format of the parameter is `pattern1_pattern2_..._patternN` (a series of pattern strings concatenated by underscores). Valid pattern strings are:
+
+* `p<N>v`: Refers to word embedding at position `i_p + <N>`. For example `p0v` refers to embedding for parent word itself, whereas `p-1v` refers to left context word of parent word given that `p != 1`, for which embedding is defined to be `0` vector. Just like left context (`p-1v`), right context (`p1v`) of a parent is a `0` vector given that parent word is the last word of the sentence.
+* `c<N>v`: Refers to word embedding at position `i_c + <N>`. For example `c0v` refers to embedding for child word itself, whereas `c-1v` refers to left context word of child word given that `c != 1`, for which embedding is defined to be `0` vector. Just like left context (`c-1v`), right context (`c1v`) of a child is a `0` vector given that child word is the last word of the sentence.
+* `tl`: Refers to _thresholded length_ defining 6 binary features for the number of words between parent and child (another way of saying absolute length between parent and child). Those are
+	* `1 if length > 2 else 0`
+	* `1 if length > 5 else 0`
+	* `1 if length > 10 else 0`
+	* `1 if length > 20 else 0`
+	* `1 if length > 30 else 0`
+	* `1 if length > 40 else 0`
+* `rl`: Refers to _raw length_ defining the number of words between parent and child as a continuos value.
+
+`-l` is used to set expected number of dimensions in word embeddings given in enriched CoNLL corpus. For example, this is 25 for majority of SCODE type based embeddings and 50 for majority of SCODE token based embeddings.
+
+`-m` is used to restrict number of training instances to be used for _optimize_ and _train_. Only first `-m` instances will be used from the sections given by `-t` option. This option defined to perform experiments to see the effect of training instances used over development set accuracy.
+
+`-x` is used to define basis function to be used by the parser. Don't use this option today. This defined for future requirements.
+
+### Two Sample Usage of ai-parse
+Following call runs au-parse for optimising a dependency parser over a corpus in `~/uparse/data/nlp/treebank/treebank-2.0/combined/conll_type_scode` root directory having 25 dimensional word embeddings. For arch scoring a combination of parent, child word embeddings, and distance between them is used (`-e` option). Model will be saved in to `scode_type.model` file once the run is complete.
+
+```
+$ cat run_type.sh 
+export CONLL_PATH=~/uparse/data/nlp/treebank/treebank-2.0/combined/conll_type_scode
+dist/Release/GNU-MacOSX/ai-parse -s optimize -p $CONLL_PATH -l 25 -e p0v_c0v_tl -o scode_type
+```
+
+Following call runs au-parse for optimising a dependency parser over a corpus in `~/uparse/data/nlp/treebank/treebank-2.0/combined/conll_token_scode` root directory having 50 dimensional word embeddings. For arch scoring a combination of parent, parent left/right contexts, child, child left/right context word embeddings, and distance between them is used (`-e` option). Model will be saved in to `scode_token.model` file once the run is complete.
+
+```
+myhost:ai-parse husnusensoy$ cat run_token.sh 
+export CONLL_PATH=~/uparse/data/nlp/treebank/treebank-2.0/combined/conll_token_scode
+dist/Release/GNU-MacOSX/ai-parse -s optimize -p $CONLL_PATH -l 50 -e p-1v_p0v_p1v_c-1v_c0v_c1v_tl -o scode_token
+```
+
+
 
 
 
