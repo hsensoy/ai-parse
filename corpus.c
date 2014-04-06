@@ -189,7 +189,7 @@ void free_CoNLLCorpus(CoNLLCorpus corpus, bool free_feature_matrix) {
  * 
  * @param has_discrete_features 
  * @param embedding_length      Length of the embedding vector to be used.
- * @return     Creates a feature vector as union of discrete and continous vectors.
+ * @return     Creates a feature vector as union of discrete and continuous vectors.
  */
 FeatureVector FeatureVector_create(bool has_discrete_features, uint32_t embedding_length) {
     FeatureVector fv = (FeatureVector) malloc(sizeof (struct FeatureVector));
@@ -314,13 +314,16 @@ void build_embedding_feature(FeaturedSentence sent, int from, int to, DArray *pa
                         length_v->data[i] = 0;
 
                 bigvector = vconcat(bigvector, length_v);
+                
+                vector_free(length_v);
             } else if (pattern->subnode == 'r') {
                 vector length_v = vector_create(1);
 
                 length_v->data[0] = abs(from - to);
 
                 bigvector = vconcat(bigvector, length_v);
-
+                
+                vector_free(length_v);
             } else if (pattern->subnode == 'n') {
 
                 vector length_v = vector_create(1);
@@ -329,6 +332,8 @@ void build_embedding_feature(FeaturedSentence sent, int from, int to, DArray *pa
                 length_v->data[0] = abs(from - to) / 250.;
 
                 bigvector = vconcat(bigvector, length_v);
+                
+                vector_free(length_v);
 
             }
 

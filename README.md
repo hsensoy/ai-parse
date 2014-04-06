@@ -1,10 +1,57 @@
 ai-parse
 ========
+## Build
+Currently ai-parse is tested on Mac OSX and Linux platforms. Makefile included with the bundle is platform aware. Use `help` to see supported Configurations
+
+```
+myhost:ai-parse husnusensoy$ make help
+This makefile supports the following configurations:
+    Debug Release Release-Linux 
+
+and the following targets:
+    build  (default target)
+    clean
+    clobber
+    all
+    help
+
+Makefile Usage:
+    make [CONF=<CONFIGURATION>] [SUB=no] build
+    make [CONF=<CONFIGURATION>] [SUB=no] clean
+    make [SUB=no] clobber
+    make [SUB=no] all
+    make help
+
+Target 'build' will build a specific configuration and, unless 'SUB=no',
+    also build subprojects.
+Target 'clean' will clean a specific configuration and, unless 'SUB=no',
+    also clean subprojects.
+Target 'clobber' will remove all built files from all configurations and,
+    unless 'SUB=no', also from subprojects.
+Target 'all' will will build all configurations and, unless 'SUB=no',
+    also build subprojects.
+Target 'help' prints this message.
+```
+### Mac OS X
+Use Debug/Release for Mac OS X platforms
+
+```
+make CONF=Release
+```
+### Linux
+Use Linux-Release for Mac OS X platforms
+
+```
+make CONF=Release-Linux 
+```
+
+## Usage
 
 Dependency Parsing by ai-lab.
 
 ```
 $ dist/Release/GNU-MacOSX/ai-parse --help
+[INFO] (main:48) ai-parse v0.9.1 (Release)
 Usage: ai-parse [options] [[--] args]
 
     -h, --help                show this help message and exit

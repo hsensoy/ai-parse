@@ -13,6 +13,9 @@
 #include "dependency.h"
 #include <string.h>
 
+#define VERSION "v0.9.1"
+
+
 #define DEFAULT_MAX_NUMIT 30
 #define DEFAULT_TRAINING_SECTION_STR "2-22"
 #define DEFAULT_DEV_SECTION_STR "22"
@@ -42,9 +45,9 @@ int main(int argc, char** argv) {
     enum EmbeddingTranformation etransform = QUADRATIC;
     
     #ifdef NDEBUG
-    log_info("ai-parse (Release)");
+    log_info("ai-parse %s (Release)", VERSION);
     #else
-    log_info("ai-parse (Debug)");
+    log_info("ai-parse %s (Debug)", VERSION);
     #endif
 
     struct argparse_option options[] = {
