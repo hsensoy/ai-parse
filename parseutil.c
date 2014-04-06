@@ -92,8 +92,8 @@ PerceptronModel optimize(int max_numit, int max_rec, const char* path, const cha
         log_info("%d\t\t%f\t%f%s", i + 1, numit_dev_avg[i], numit_train_avg[i], (i + 1 == best_iter) ? " (*)" : "");
     }
     
-    free_CoNLLCorpus(dev,true);
-    free_CoNLLCorpus(train,true);
+    //free_CoNLLCorpus(dev,true);
+    //free_CoNLLCorpus(train,true);
 
     return model;
 
