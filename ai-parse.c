@@ -40,6 +40,12 @@ int main(int argc, char** argv) {
     const char * etransform_str = NULL;
     const char *modelname = NULL;
     enum EmbeddingTranformation etransform = QUADRATIC;
+    
+    #ifdef NDEBUG
+    log_info("ai-parse (Release)");
+    #else
+    log_info("ai-parse (Debug)");
+    #endif
 
     struct argparse_option options[] = {
         OPT_HELP(),
