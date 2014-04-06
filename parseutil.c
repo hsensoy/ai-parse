@@ -52,6 +52,7 @@ PerceptronModel optimize(int max_numit, int max_rec, const char* path, const cha
 
     int best_iter = -1;
     float best_score = 0.0;
+    
     for (numit = 1; numit <= max_numit && keepRunning; numit++) {
         log_info("BEGIN: Iteration %d", numit);
 

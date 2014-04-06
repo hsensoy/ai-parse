@@ -47,13 +47,9 @@ vector vector_create(size_t n) {
     check_mem(v);
 
     v->true_n = n;
-    //v->n = n;
     v->n = aligned_size(v->true_n);
 
     v->data = alloc_aligned(v->n);
-    
-    //v->data = (float *)mkl_malloc( n * sizeof( float ), 64 );
-
 
     return v;
 

@@ -50,7 +50,7 @@ OBJECTFILES= \
 
 
 # C Compiler Flags
-CFLAGS=-m64
+CFLAGS=-m64 -DNDEBUG
 
 # CC Compiler Flags
 CCFLAGS=

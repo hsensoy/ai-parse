@@ -189,6 +189,7 @@
           <developmentMode>6</developmentMode>
           <architecture>2</architecture>
           <standard>3</standard>
+          <commandLine>-DNDEBUG</commandLine>
           <warningLevel>2</warningLevel>
         </cTool>
         <linkerTool>
