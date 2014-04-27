@@ -12,6 +12,7 @@
 
 #include "debug.h"
 #include "dependency.h"
+
 #include <string.h>
 
 #ifdef __GNUC__
@@ -24,6 +25,72 @@ Word Root = NULL;
  * Single feature matrix across the parser at a time.
  */
 FeatureMatrix feature_matrix_singleton = NULL;
+
+/**
+ * ai-parse.c file for actual storage allocation for those two variables
+ */
+extern const char *epattern;
+extern enum EmbeddingTranformation etransform;
+
+DArray* embedding_pattern_parts = NULL;
+
+EmbeddingPattern create_EmbeddingPattern() {
+    EmbeddingPattern pattern = (EmbeddingPattern) malloc(sizeof (struct EmbeddingPattern));
+    check(pattern != NULL, "Embedding Pattern allocation error");
+
+    return pattern;
+
+error:
+    exit(1);
+}
+
+// Singleton
+
+DArray* get_embedding_pattern_parts() {
+    if (embedding_pattern_parts == NULL) {
+        if (epattern != NULL) {
+            DArray* patterns = split(epattern, "_");
+
+            embedding_pattern_parts = DArray_create(sizeof (EmbeddingPattern), DArray_count(patterns));
+
+            for (int pi = 0; pi < DArray_count(patterns); pi++) {
+                char *pattern = (char*) DArray_get(patterns, pi);
+
+                EmbeddingPattern ep = create_EmbeddingPattern();
+
+                if (strcmp(pattern, "tl") == 0) { //thresholded-length
+                    ep->node = 'l';
+                    ep->subnode = 't';
+                } else if (strcmp(pattern, "nl") == 0) { // normalized-length
+                    ep->node = 'l';
+                    ep->subnode = 'n';
+                } else if (strcmp(pattern, "l") == 0) { // raw length
+                    ep->node = 'l';
+                    ep->subnode = 'r';
+                } else {
+
+                    int n = sscanf(pattern, "%c%dv", &(ep->node), &(ep->offset));
+
+                    check(n == 2, "Expected pattern format is [p|c]<offset>v where as got %s", pattern);
+                    check(ep->node == 'p' || ep->node == 'c', "Unknown node name %c expected p or c", ep->node);
+                }
+
+                DArray_push(embedding_pattern_parts, ep);
+            }
+
+        } else {
+            embedding_pattern_parts = NULL;
+        }
+
+        return embedding_pattern_parts;
+    }
+    else {
+        return embedding_pattern_parts;
+    }
+
+error:
+    return NULL;
+}
 
 Word ROOT(int dim) {
     if (Root == NULL) {
@@ -49,35 +116,15 @@ error:
     exit(1);
 }
 
-struct EmbeddingPattern {
-    int offset;
-    char node;
-    char subnode;
-};
-
-typedef struct EmbeddingPattern* EmbeddingPattern;
-
-EmbeddingPattern create_EmbeddingPattern() {
-    EmbeddingPattern pattern = (EmbeddingPattern) malloc(sizeof (struct EmbeddingPattern));
-    check(pattern != NULL, "Embedding Pattern allocation error");
-
-    return pattern;
-
-error:
-    exit(1);
-}
-
 /**
  * 
  * @param base_dir CoNLL base directory including sections
  * @param sections DArray of sections
  * @param embedding_dimension Embedding dimension per word
- * @param embedding_pattern Embedding patterns delimited by _
- * @param transform Transform to be applied on concatenated embedding
  * @param discrete_patterns Reserved for future use
  * @return CoNLLCorpus structure
  */
-CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embedding_dimension, const char *embedding_pattern, enum EmbeddingTranformation transform, DArray* discrete_patterns) {
+CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embedding_dimension, DArray* discrete_patterns) {
     CoNLLCorpus corpus = (CoNLLCorpus) malloc(sizeof (struct CoNLLCorpus));
 
     check_mem(corpus);
@@ -88,40 +135,7 @@ CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embed
     corpus->sentences = DArray_create(sizeof (FeaturedSentence), 2000);
     check_mem(corpus->sentences);
 
-    if (embedding_pattern) {
-        DArray* patterns = split(embedding_pattern, "_");
-
-        corpus->embedding_pattern_parts = DArray_create(sizeof (EmbeddingPattern), DArray_count(patterns));
-        corpus->hasembeddings = embedding_dimension > 0;
-
-        for (int pi = 0; pi < DArray_count(patterns); pi++) {
-            char *pattern = (char*) DArray_get(patterns, pi);
-
-            EmbeddingPattern epattern = create_EmbeddingPattern();
-
-            if (strcmp(pattern, "tl") == 0) { //thresholded-length
-                epattern->node = 'l';
-                epattern->subnode = 't';
-            } else if (strcmp(pattern, "nl") == 0) { // normalized-length
-                epattern->node = 'l';
-                epattern->subnode = 'n';
-            } else if (strcmp(pattern, "l") == 0) { // raw length
-                epattern->node = 'l';
-                epattern->subnode = 'r';
-            } else {
-
-                int n = sscanf(pattern, "%c%dv", &(epattern->node), &(epattern->offset));
-
-                check(n == 2, "Expected pattern format is [p|c]<offset>v where as got %s", pattern);
-                check(epattern->node == 'p' || epattern->node == 'c', "Unknown node name %c expected p or c", epattern->node);
-            }
-
-            DArray_push(corpus->embedding_pattern_parts, epattern);
-        }
-    } else {
-        corpus->embedding_pattern_parts = NULL;
-        corpus->hasembeddings = false;
-    }
+    corpus->hasembeddings = embedding_dimension > 0;
 
     if (discrete_patterns) {
         corpus->disrete_patterns_parts = DArray_create(sizeof (DArray*), DArray_count(discrete_patterns));
@@ -137,11 +151,10 @@ CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embed
     corpus->Root = ROOT(embedding_dimension);
     corpus->word_embedding_dimension = embedding_dimension;
     corpus->transformed_embedding_length = -1;
-    corpus->embedding_transform = transform;
 
     int embedding_concat_length = 0;
-    for (int pi = 0; pi < DArray_count(corpus->embedding_pattern_parts); pi++) {
-        EmbeddingPattern pattern = (EmbeddingPattern) DArray_get(corpus->embedding_pattern_parts, pi);
+    for (int pi = 0; pi < DArray_count(get_embedding_pattern_parts()); pi++) {
+        EmbeddingPattern pattern = (EmbeddingPattern) DArray_get(get_embedding_pattern_parts(), pi);
 
         if (pattern->node == 'p' || pattern->node == 'c')
             embedding_concat_length += embedding_dimension;
@@ -151,8 +164,9 @@ CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embed
             embedding_concat_length += 6;
     }
 
+    // Be optimistic about LINEAR transformation
     corpus->transformed_embedding_length = embedding_concat_length;
-    if (corpus->embedding_transform == QUADRATIC)
+    if (etransform == QUADRATIC)
         corpus->transformed_embedding_length = ((corpus->transformed_embedding_length) * (corpus->transformed_embedding_length + 3)) / 2;
 
     log_info("Corpus has an embedding length of %d (%ld with transformation)", embedding_dimension, corpus->transformed_embedding_length);
@@ -174,16 +188,25 @@ void free_CoNLLCorpus(CoNLLCorpus corpus, bool free_feature_matrix) {
         free_FeaturedSentence(corpus, si);
     }
 
-    DArray_clear_destroy(corpus->disrete_patterns_parts);
-    DArray_clear_destroy(corpus->embedding_pattern_parts);
-    
-    if (feature_matrix_singleton != NULL && free_feature_matrix){
+    debug("Sentences are released");
+
+    if (corpus->disrete_patterns_parts != NULL)
+        DArray_clear_destroy(corpus->disrete_patterns_parts);
+
+    DArray *epparts = get_embedding_pattern_parts();
+    if (epparts != NULL)
+        DArray_clear_destroy(epparts);
+
+    debug("Patterns are released");
+
+    if (feature_matrix_singleton != NULL && free_feature_matrix) {
         free_featureMatrix(feature_matrix_singleton);
-        
+
         feature_matrix_singleton = NULL;
     }
-}
 
+    debug("Feature Matrix Singleton is released");
+}
 
 /**
  * 
@@ -230,7 +253,7 @@ FeatureMatrix FeatureMatrix_create(int sent_length, uint32_t embedding_length, b
     check(matrix != NULL, "Error in allocating matrix FeatureMatrix");
 
     matrix->size = sent_length + 1;
-    
+
     matrix->matrix_data = (FeatureVector**) malloc(sizeof (FeatureVector*) * (matrix->size));
     check(matrix->matrix_data != NULL, "Error in allocating 2-dimensional FeatureVector");
     matrix->embedding_length = embedding_length;
@@ -276,10 +299,21 @@ void free_featureMatrix(FeatureMatrix matrix) {
     free(matrix);
 }
 
-void build_embedding_feature(FeaturedSentence sent, int from, int to, DArray *patterns) {
+/**
+ * 
+ * @param sent
+ * @param from
+ * @param to
+ * @param target When NULL a new vector is created by vlinear/vquadratic functions. Release of memory is deferred to user.
+ *                      When a non-NULL vector is given vlinear/vquadratic functions simply perform a copy operation with no new allocation.
+ * @return 
+ */
+vector embedding_feature(FeaturedSentence sent, int from, int to, vector target) {
     vector bigvector = NULL;
 
-    check(from != to && from <= sent->length && from >= 0 && to >= 1 && to <= sent->length, "Arc between suspicious words %d to %d for sentence length %d", from, to, sent->length);
+    IS_ARC_VALID(from, to, sent->length);
+    
+    DArray* patterns = get_embedding_pattern_parts();
 
     debug("Number of embedding patterns is %d", DArray_count(patterns));
     for (int pi = 0; pi < DArray_count(patterns); pi++) {
@@ -314,7 +348,7 @@ void build_embedding_feature(FeaturedSentence sent, int from, int to, DArray *pa
                         length_v->data[i] = 0;
 
                 bigvector = vconcat(bigvector, length_v);
-                
+
                 vector_free(length_v);
             } else if (pattern->subnode == 'r') {
                 vector length_v = vector_create(1);
@@ -322,7 +356,7 @@ void build_embedding_feature(FeaturedSentence sent, int from, int to, DArray *pa
                 length_v->data[0] = abs(from - to);
 
                 bigvector = vconcat(bigvector, length_v);
-                
+
                 vector_free(length_v);
             } else if (pattern->subnode == 'n') {
 
@@ -332,7 +366,7 @@ void build_embedding_feature(FeaturedSentence sent, int from, int to, DArray *pa
                 length_v->data[0] = abs(from - to) / 250.;
 
                 bigvector = vconcat(bigvector, length_v);
-                
+
                 vector_free(length_v);
 
             }
@@ -341,11 +375,21 @@ void build_embedding_feature(FeaturedSentence sent, int from, int to, DArray *pa
     }
 
 
-    vquadratic(((sent->feature_matrix_ref->matrix_data)[from][to])->continous_v, bigvector, 1);
+    switch (etransform) {
+        case LINEAR:
+            return vlinear(target, bigvector);
+            break;
+        case QUADRATIC:
+            return vquadratic(target, bigvector, 1);
+            break;
+    }
 
-    return;
 error:
-    exit(1);
+   return NULL;
+}
+
+void build_embedding_feature(FeaturedSentence sent, int from, int to) {
+    embedding_feature(sent,from,to, ((sent->feature_matrix_ref->matrix_data)[from][to])->continous_v);
 }
 
 void set_FeatureMatrix(Hashmap* featuremap, CoNLLCorpus corpus, int sentence_idx) {
@@ -374,9 +418,9 @@ void set_FeatureMatrix(Hashmap* featuremap, CoNLLCorpus corpus, int sentence_idx
                     (sentence->feature_matrix_ref->matrix_data)[_from][_to]->discrete_v = NULL;
 
                 if (corpus->hasembeddings) {
-                    build_embedding_feature(sentence, _from, _to, corpus->embedding_pattern_parts);
+                    build_embedding_feature(sentence, _from, _to);
 
-                    debug("Embedding vector length is %ld:%ld", (sentence->feature_matrix_ref->matrix_data)[_from][_to]->continous_v->true_n,(sentence->feature_matrix_ref->matrix_data)[_from][_to]->continous_v->n);
+                    debug("Embedding vector length is %ld:%ld", (sentence->feature_matrix_ref->matrix_data)[_from][_to]->continous_v->true_n, (sentence->feature_matrix_ref->matrix_data)[_from][_to]->continous_v->n);
 
                     //if ((sentence->feature_matrix)[_from][_to]->continous_v->true_n > 50)
                     //	log_info("%ld",(sentence->feature_matrix)[_from][_to]->continous_v->true_n);
@@ -413,6 +457,60 @@ float** square_adjacency_matrix(int n, float init_value) {
 error:
     log_err("adjacency_matrix allocation error");
     exit(1);
+}
+
+void set_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, alpha_t **va, enum Kernel k) {
+
+    FeaturedSentence sentence = (FeaturedSentence) DArray_get(corpus->sentences, sentence_idx);
+    int length = sentence->length;
+
+    if (sentence->adjacency_matrix == NULL)
+        sentence->adjacency_matrix = square_adjacency_matrix(length + 1, NEGATIVE_INFINITY);
+
+    for (int _from = 0; _from <= length; _from++)
+        for (int _to = 1; _to <= length; _to++) {
+            if (_to != _from) {
+                (sentence->adjacency_matrix)[_from][_to] = 0.0;
+
+                if (corpus->hasembeddings) {
+
+                    debug("%d->%d\n", _from, _to);
+
+                    vector embedding = (sentence->feature_matrix_ref->matrix_data)[_from][_to]->continous_v;
+
+
+                    if (embedding == NULL) {
+                        log_err("NULL continuous vector");
+                        exit(EXIT_FAILURE);
+                    }
+                    alpha_t *a, *tmp;
+                    switch (k) {
+                        case KLINEAR:
+                            break;
+                        case KPOLYNOMIAL:
+                            debug("Compute over %u support vectors", HASH_COUNT(*va));
+
+                            HASH_ITER(hh, *va, a, tmp) {
+                                //FeaturedSentence sv_sent = (FeaturedSentence) DArray_get(corpus->sentences, a->sentence_idx);
+
+                                //vector sv = embedding_feature(sv_sent,a->from,a->to, NULL);
+                             
+
+                                (sentence->adjacency_matrix)[_from][_to] += a->alpha * polynomial(a->v, embedding, 1., 4);
+                                
+                                //vector_free(sv);
+                            }
+
+                            break;
+                        default:
+                            break;
+
+
+                    }
+
+                }
+            }
+        }
 }
 
 void build_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, vector embeddings_w, vector discrete_w) {
@@ -502,7 +600,7 @@ void Word_free(Word w) {
     vector_free(w->embedding);
     free(w->form);
     free(w->postag);
-    
+
     free(w);
 }
 
@@ -537,13 +635,13 @@ error:
 // TODO: Complete implementation
 
 void free_FeaturedSentence(CoNLLCorpus corpus, int sentence_idx) {
-    
+
     FeaturedSentence sentence = (FeaturedSentence) DArray_get(corpus->sentences, sentence_idx);
-    
-    for(int wi = 0;wi < DArray_count(sentence->words);wi++){
-        
-        Word word = (Word)DArray_get(sentence->words,wi);
-        
+
+    for (int wi = 0; wi < DArray_count(sentence->words); wi++) {
+
+        Word word = (Word) DArray_get(sentence->words, wi);
+
         Word_free(word);
     }
 

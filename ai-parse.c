@@ -20,11 +20,21 @@
 #define DEFAULT_TRAINING_SECTION_STR "2-22"
 #define DEFAULT_DEV_SECTION_STR "22"
 #define DEFAULT_EMBEDDING_TRANFORMATION QUADRATIC
+#define DEFAULT_KERNEL KLINEAR
 
 static const char *const usage[] = {
     "ai-parse [options] [[--] args]",
     NULL,
 };
+
+
+/**
+ * epattern is the embedding pattern.
+ * etransform is the embedding vector transformation to be applied.
+ * 
+ */
+const char *epattern = NULL;
+enum EmbeddingTranformation etransform = QUADRATIC;
 
 /*
  * 
@@ -35,14 +45,17 @@ int main(int argc, char** argv) {
     int maxnumit = 0;
     int edimension = 0;
     int maxrec = -1;
+    int bias = 1;
+    int degree = 2;
     const char *stage = NULL;
     const char *training = NULL;
     const char *dev = NULL;
     const char *path = NULL;
-    const char *epattern = NULL;
     const char * etransform_str = NULL;
     const char *modelname = NULL;
-    enum EmbeddingTranformation etransform = QUADRATIC;
+    const char *kernel_str = NULL;
+    enum Kernel kernel = KLINEAR;
+
     
     #ifdef NDEBUG
     log_info("ai-parse %s (Release)", VERSION);
@@ -63,6 +76,9 @@ int main(int argc, char** argv) {
         OPT_INTEGER('l', "edimension", &edimension, "Embedding dimension", NULL),
         OPT_INTEGER('m', "maxrec", &maxrec, "Maximum number of training instance", NULL),
         OPT_STRING('x', "etransform", &etransform_str, "Embedding Transformation", NULL),
+        OPT_STRING('k', "kernel", &kernel_str, "Kernel Type", NULL),
+        OPT_INTEGER('a', "bias", &bias, "Polynomial kernel additive term. Default is 1", NULL),
+        OPT_STRING('b', "degree", &degree, "Degree of polynomial kernel. Default is 2", NULL),
         OPT_END(),
     };
     struct argparse argparse;
@@ -102,7 +118,7 @@ int main(int argc, char** argv) {
         check(epattern != NULL, "Embedding pattern is required for -s optimize,train");
 
         if (etransform_str == NULL) {
-            log_warn("Embedding transformation is set to be QUADRATIC");
+            log_info("Embedding transformation is set to be QUADRATIC");
 
             etransform = DEFAULT_EMBEDDING_TRANFORMATION;
         } else if (strcmp(etransform_str, "LINEAR") == 0) {
@@ -110,11 +126,24 @@ int main(int argc, char** argv) {
         } else if (strcmp(etransform_str, "QUADRATIC") == 0) {
             etransform = QUADRATIC;
         } else {
-            log_info("Unsupported transformation type for embedding %s", etransform_str);
-            goto error;
+            log_err("Unsupported transformation type for embedding %s", etransform_str);
         }
 
 
+    }
+    
+    if (kernel_str  != NULL){
+        if (strcmp(kernel_str,"POLYNOMIAL") == 0){
+            
+            log_info("Polynomial kernel will be used with bias %d and degree %d", bias,degree);
+            
+            kernel_workbench(maxnumit, maxrec, path, training, dev, edimension, kernel, bias, degree);
+            exit(1);
+            
+        }else {
+            log_err("Unsupported kernel type %s. Valid options are LINEAR and POLYNOMIAL.", kernel_str);
+            goto error;
+        }
     }
 
     if (strcmp(stage, "optimize") == 0) {

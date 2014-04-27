@@ -117,5 +117,12 @@ void parse_and_dump(PerceptronModel mdl, FILE *fp, CoNLLCorpus corpus);
  */
 void dump_model(FILE *fp, int edimension, const char *epattern, vector w,int best_numit,enum EmbeddingTranformation transformation);
 
+int* parse(FeaturedSentence sent);
+int* get_parents(const FeaturedSentence sent) ;
+int nmatch(const int* model, const int* empirical, int length) ;
+void printfarch(int *parent, int len);
+
+
+void update_alpha(alpha_t **va, uint32_t sidx, uint16_t from, uint16_t to, FeaturedSentence sent, float inc) ;
 
 #endif

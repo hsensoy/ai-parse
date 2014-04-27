@@ -857,7 +857,7 @@ void dump_model(FILE *fp, int edimension, const char *epattern, vector w, int be
             break;
     }
     
-    fprintf(fp, "dimension=%d\n",w->true_n);
+    fprintf(fp, "dimension=%ld\n",w->true_n);
     
     for(int i = 0 ;i < w->true_n;i++){
         fprintf(fp, "%d=%f\n",i, w->data[i]);
@@ -961,4 +961,53 @@ double test_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, boo
     }
 
     return (match * 1.) / total;
+}
+
+
+void update_alpha(alpha_t **va, uint32_t sidx, uint16_t from, uint16_t to, FeaturedSentence sent, float inc) {
+
+    unsigned keylen;
+    alpha_t *a, *dummy;
+    alpha_key_t *a_key;
+
+    keylen = offsetof(alpha_t, to) /* offset of last key field */
+            + sizeof (uint16_t) /* size of last key field */
+            - offsetof(alpha_t, sentence_idx); /* offset of first key field */
+
+    a_key = (alpha_key_t*) malloc(sizeof (alpha_key_t));
+    memset(a_key, 0, sizeof (alpha_key_t));
+
+    a_key->from = from;
+    a_key->to = to;
+    a_key->sentence_idx = sidx;
+
+
+
+    HASH_FIND(hh, *va, &a_key->sentence_idx, keylen, a);
+    if (a) {
+        a->alpha += inc;
+
+        if (a->alpha == 0) {
+            HASH_DEL(*va, a);
+            debug("Removing key %d: %d -> %d", a_key->sentence_idx, a_key->from, a_key->to);
+        } else {
+            HASH_REPLACE(hh, *va, sentence_idx, keylen, a, dummy);
+        }
+    } else {
+        a = (alpha_t*) malloc(sizeof (alpha_t));
+        memset(a, 0, sizeof (alpha_t)); /* zero fill */
+
+        a->from = from;
+        a->to = to;
+        a->sentence_idx = sidx;
+
+        a->alpha = inc;
+        a->v = embedding_feature(sent,from,to,NULL);
+
+        HASH_ADD(hh, *va, sentence_idx, keylen, a);
+
+
+        debug("%u keys in alpha", HASH_COUNT(*va));
+
+    }
 }

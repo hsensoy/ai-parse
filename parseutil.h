@@ -9,6 +9,7 @@
 #define	PARSEUTIL_H
 
 #include "corpus.h"
+
 #include "dependency.h"
 
 #ifdef	__cplusplus
@@ -35,7 +36,8 @@ extern "C" {
  * @return Model trained
  */
 PerceptronModel optimize(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension, const char* embedding_pattern, enum EmbeddingTranformation tranformation) ;
- 
+
+void kernel_workbench(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension,  enum Kernel kernel, int bias, int degree);
 
 #endif	/* PARSEUTIL_H */
 

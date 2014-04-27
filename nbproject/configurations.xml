@@ -15,7 +15,11 @@
       <itemPath>minunit.h</itemPath>
       <itemPath>parseutil.h</itemPath>
       <itemPath>stringalgo.h</itemPath>
+      <itemPath>utarray.h</itemPath>
+      <itemPath>uthash.h</itemPath>
       <itemPath>util.h</itemPath>
+      <itemPath>utlist.h</itemPath>
+      <itemPath>utstring.h</itemPath>
       <itemPath>vector.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
@@ -96,9 +100,17 @@
       </item>
       <item path="stringalgo.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="utarray.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="uthash.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="util.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="util.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="utlist.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="utstring.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="vector.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -169,9 +181,17 @@
       </item>
       <item path="stringalgo.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="utarray.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="uthash.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="util.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="util.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="utlist.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="utstring.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="vector.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -238,9 +258,17 @@
       </item>
       <item path="stringalgo.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="utarray.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="uthash.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="util.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="util.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="utlist.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="utstring.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="vector.c" ex="false" tool="0" flavor2="0">
       </item>

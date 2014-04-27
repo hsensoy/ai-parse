@@ -20,6 +20,9 @@
 #define START  "*"
 //static const char* ROOT = "root";
 
+
+
+
 #define MAX_SENT_LENGTH 20
 
 struct Word {
@@ -90,22 +93,28 @@ struct CoNLLCorpus {
 
     DArray *sentences;
 
-    DArray *embedding_pattern_parts;
     bool hasembeddings;
     DArray *disrete_patterns_parts;
 
     Word Root;
     size_t word_embedding_dimension;
     size_t transformed_embedding_length;
-    
-    enum EmbeddingTranformation embedding_transform;
 };
 
 typedef struct CoNLLCorpus* CoNLLCorpus;
 
 
+struct EmbeddingPattern {
+    int offset;
+    char node;
+    char subnode;
+};
 
-CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embedding_dimension, const char *embedding_pattern, enum EmbeddingTranformation transform, DArray* discrete_patterns) ;
+typedef struct EmbeddingPattern* EmbeddingPattern;
+
+
+
+CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embedding_dimension, DArray* discrete_patterns) ;
 void read_corpus(CoNLLCorpus coprus, bool build_feature_matrix);
 
 void free_CoNLLCorpus(CoNLLCorpus corpus, bool free_feature_matrix);
@@ -130,7 +139,10 @@ void free_featureMatrix(FeatureMatrix matrix);
 void free_feature_matrix(CoNLLCorpus corpus, int sentence_idx);
 
 void build_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, vector embeddings_w, vector discrete_w);
+void set_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, alpha_t **va, enum Kernel k);
 
 void free_FeaturedSentence(CoNLLCorpus corpus, int sentence_idx);
+
+vector embedding_feature(FeaturedSentence sent, int from, int to, vector target);
 
 #endif
