@@ -1,6 +1,5 @@
 
 #include "util.h"
-#include "corpus.h"
 #include "dependency.h"
 #include "parseutil.h"
 #include <stdbool.h>
@@ -20,10 +19,17 @@ void intHandler(int dummy) {
 #define MAX_IDLE_ITER 3
 #define MIN_DELTA 0.001
 
+/**
+ * ai-parse.c file for actual storage allocation for those two variables
+ */
+extern const char *epattern;
+extern enum EmbeddingTranformation etransform;
+extern enum Kernel kernel;
+
 void kernel_workbench(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension, enum Kernel kernel, int bias, int degree) {
     DArray *train_sections = parse_range(train_sections_str);
     DArray *dev_sections = parse_range(dev_sections_str);
-     long match = 0, total = 0;
+    long match = 0, total = 0;
 
     signal(SIGINT, intHandler);
 
@@ -45,54 +51,58 @@ void kernel_workbench(int max_numit, int max_rec, const char* path, const char* 
     alpha_t *va = NULL;
 
     int i;
-    
+
+    KernelPerceptron kp = create_PolynomialKernelPerceptron(4, 1.);
+
     int max_sv = 0;
     for (i = 0; i < DArray_count(train->sentences); i++) {
 
 
         FeaturedSentence sent = (FeaturedSentence) DArray_get(train->sentences, i);
 
-        
+
         set_FeatureMatrix(NULL, train, i);
 
-        set_adjacency_matrix(train, i, &va, KPOLYNOMIAL);
-        
-        max_sv += (sent->length+1) * sent->length - sent->length;
+        set_adjacency_matrix_fast(train, i, kp, false);
+
+        max_sv += (sent->length + 1) * sent->length - sent->length;
 
         int *model = parse(sent);
-        
+
         //printfarch(model, sent->length);
-        debug("Parsing sentence %d is done", i);
+        debug("Parsing sentence %d of length %d is done", i, sent->length);
         int *empirical = get_parents(sent);
 
         //printfarch(empirical, sent->length);
         int nm = nmatch(model, empirical, sent->length);
-        
+
         debug("Model matches %d arcs out of %d arcs", nm, sent->length);
         if (nm != sent->length) { // root has no valid parent.
             debug("Model matches %d arcs out of %d arcs", nm, sent->length);
-            
+
 
             for (int to = 1; to <= sent->length; to++) {
 
+                if (model[to] != empirical[to]) {
 
-                update_alpha(&va, i, model[to], to, sent, -1);
+                    update_alpha(kp, i, model[to], to, sent, -1);
 
-                update_alpha(&va, i, empirical[to], to , sent, +1);
+                    update_alpha(kp, i, empirical[to], to, sent, +1);
+                }
 
 
             }
         }
-        
+
         match += nm;
         total += (sent->length);
-        
-  
-        if ((i+1) % 100 == 0 && i != 0) {
-            log_info("Running training accuracy %lf after %d sentence.", (match * 1.) / total,i+1);
-            
-            unsigned nsv  =HASH_COUNT(va);
-            log_info("%u (%f of total %d) support vectors", nsv, (nsv*1.)/max_sv,max_sv);
+
+
+        if ((i + 1) % 100 == 0 && i != 0) {
+            log_info("Running training accuracy %lf after %d sentence.", (match * 1.) / total, i + 1);
+
+            unsigned nsv = kp->M;
+            log_info("%u (%f of total %d) support vectors", nsv, (nsv * 1.) / max_sv, max_sv);
         }
 
 
@@ -108,7 +118,7 @@ void kernel_workbench(int max_numit, int max_rec, const char* path, const char* 
     free_CoNLLCorpus(train, true);
 }
 
-PerceptronModel optimize(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension, const char* embedding_pattern, enum EmbeddingTranformation tranformation) {
+void* optimize(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension) {
     DArray *train_sections = parse_range(train_sections_str);
     DArray *dev_sections = parse_range(dev_sections_str);
 
@@ -134,8 +144,12 @@ PerceptronModel optimize(int max_numit, int max_rec, const char* path, const cha
     check(numit_dev_avg != NULL, "Memory allocation failed for numit_dev_avg");
     check(numit_train_avg != NULL, "Memory allocation failed for numit_train_avg");
 
-    PerceptronModel model = PerceptronModel_create(train, NULL);
-
+    PerceptronModel model = NULL;
+    KernelPerceptron kmodel = NULL;
+    if (kernel == KLINEAR)
+        model = PerceptronModel_create(train, NULL);
+    else
+        kmodel = create_PolynomialKernelPerceptron(4, 1.);
 
 
     int numit;
@@ -146,12 +160,20 @@ PerceptronModel optimize(int max_numit, int max_rec, const char* path, const cha
     for (numit = 1; numit <= max_numit && keepRunning; numit++) {
         log_info("BEGIN: Iteration %d", numit);
 
-        train_perceptron_once(model, train, max_rec);
+        if (kernel == KLINEAR)
+            train_perceptron_once(model, train, max_rec);
+        else
+            train_once_KernelPerceptronModel(kmodel, train, max_rec);
+
 
         log_info("END: Iteration %d", numit);
 
-        double dev_acc = test_perceptron_parser(model, dev, true, true);
-        //double train_acc = test_perceptron_parser(model, train, true, true);
+        double dev_acc;
+        if (kernel == KLINEAR)
+            dev_acc = test_perceptron_parser(model, dev, true, true);
+        else
+            dev_acc = test_KernelPerceptronModel(kmodel, dev, true);
+
         double train_acc = 0.0;
 
 
@@ -167,8 +189,10 @@ PerceptronModel optimize(int max_numit, int max_rec, const char* path, const cha
             best_score = dev_acc;
             best_iter = numit;
 
-            model->best_numit = numit;
-            memcpy(model->embedding_w_best->data, model->embedding_w_temp->data, sizeof (float)*model->embedding_w_best->true_n);
+            if (kernel == KLINEAR)
+                mark_best_PerceptronModel(model, numit);
+            else
+                mark_best_KernelPerceptronModel(kmodel, numit);
         }
 
         if (numit - best_iter > MAX_IDLE_ITER && STOP_ON_CONVERGE) {
@@ -182,10 +206,13 @@ PerceptronModel optimize(int max_numit, int max_rec, const char* path, const cha
         log_info("%d\t\t%f\t%f%s", i + 1, numit_dev_avg[i], numit_train_avg[i], (i + 1 == best_iter) ? " (*)" : "");
     }
 
-    free_CoNLLCorpus(dev, true);
-    free_CoNLLCorpus(train, true);
+    //free_CoNLLCorpus(dev, true);
+    //free_CoNLLCorpus(train, true);
 
-    return model;
+    if (kernel == KLINEAR)
+        return (void*) model;
+    else
+        return (void*) kmodel;
 
 error:
     log_err("Memory allocation error");

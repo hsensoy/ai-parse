@@ -17,6 +17,14 @@
 #include <string.h>
 
 #define GAMMA 0.5
+
+/**
+ * ai-parse.c file for actual storage allocation for those two variables
+ */
+extern const char *epattern;
+extern enum EmbeddingTranformation etransform;
+extern enum Kernel kernel;
+
 /*
 float rbf(const float *v1, const float *v2, size_t  n){
     float result = 0.0;
@@ -679,8 +687,7 @@ void printfembedding(FeatureVector **mat, size_t n) {
     }
 }
 
-
-double dsecnd(){
+double dsecnd() {
     return 0.0;
 }
 
@@ -688,19 +695,19 @@ void train_perceptron_once(PerceptronModel mdl, const CoNLLCorpus corpus, int ma
     long match = 0, total = 0;
     //size_t slen=0;
 
-    double s_initial =  dsecnd();
-    
-    
-    log_info("Total number of training instances %d",(max_rec == -1)? DArray_count(corpus->sentences):max_rec);
-    for (int si = 0; si < ((max_rec == -1)? DArray_count(corpus->sentences):max_rec); si++) {
+    double s_initial = dsecnd();
+
+
+    log_info("Total number of training instances %d", (max_rec == -1) ? DArray_count(corpus->sentences) : max_rec);
+    for (int si = 0; si < ((max_rec == -1) ? DArray_count(corpus->sentences) : max_rec); si++) {
         //log_info("Parsing sentence %d/%d", si+1, DArray_count(corpus));
-        debug("Sentence %d",si);
+        debug("Sentence %d", si);
         FeaturedSentence sent = (FeaturedSentence) DArray_get(corpus->sentences, si);
-        
+
 
         debug("Building feature matrix for sentence %d", si);
         set_FeatureMatrix(NULL, corpus, si);
-        
+
 
         //printfembedding(sent->feature_matrix, sent->length);
 
@@ -803,10 +810,10 @@ void train_perceptron_once(PerceptronModel mdl, const CoNLLCorpus corpus, int ma
         match += nm;
         total += (sent->length);
 
-        if (si % 1000 == 1){
-            log_info("Running training accuracy %lf (Elapsed %.5f sec)", (match * 1.) / total, ( dsecnd() - s_initial));
-            
-            s_initial =  dsecnd();
+        if (si % 1000 == 1) {
+            log_info("Running training accuracy %lf (Elapsed %.5f sec)", (match * 1.) / total, (dsecnd() - s_initial));
+
+            s_initial = dsecnd();
         }
 
 
@@ -842,13 +849,13 @@ error:
     exit(1);
 }
 
-void dump_model(FILE *fp, int edimension, const char *epattern, vector w, int best_numit, enum EmbeddingTranformation transformation){
-    
-    fprintf(fp, "edimension=%d\n",edimension);
-    fprintf(fp, "epattern=%s\n",epattern);
-    fprintf(fp, "bestnumit=%d\n",best_numit);
-    
-    switch(transformation){
+void dump_PerceptronModel(FILE *fp, int edimension, vector w, int best_numit) {
+
+    fprintf(fp, "edimension=%d\n", edimension);
+    fprintf(fp, "epattern=%s\n", epattern);
+    fprintf(fp, "bestnumit=%d\n", best_numit);
+
+    switch (etransform) {
         case LINEAR:
             fprintf(fp, "transformation=LINEAR\n");
             break;
@@ -856,11 +863,11 @@ void dump_model(FILE *fp, int edimension, const char *epattern, vector w, int be
             fprintf(fp, "transformation=QUADRATIC\n");
             break;
     }
-    
-    fprintf(fp, "dimension=%ld\n",w->true_n);
-    
-    for(int i = 0 ;i < w->true_n;i++){
-        fprintf(fp, "%d=%f\n",i, w->data[i]);
+
+    fprintf(fp, "dimension=%ld\n", w->true_n);
+
+    for (int i = 0; i < w->true_n; i++) {
+        fprintf(fp, "%d=%f\n", i, w->data[i]);
     }
 }
 
@@ -870,7 +877,7 @@ void train_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, int 
 
         log_info("%d iteration in parser training...", (n + 1));
 
-        train_perceptron_once(mdl, corpus,max_rec);
+        train_perceptron_once(mdl, corpus, max_rec);
     }
 
     if (corpus->disrete_patterns_parts)
@@ -949,7 +956,7 @@ double test_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, boo
                 total++;
             }
         }
-        
+
         free(model);
 
 
@@ -963,51 +970,7 @@ double test_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, boo
     return (match * 1.) / total;
 }
 
-
-void update_alpha(alpha_t **va, uint32_t sidx, uint16_t from, uint16_t to, FeaturedSentence sent, float inc) {
-
-    unsigned keylen;
-    alpha_t *a, *dummy;
-    alpha_key_t *a_key;
-
-    keylen = offsetof(alpha_t, to) /* offset of last key field */
-            + sizeof (uint16_t) /* size of last key field */
-            - offsetof(alpha_t, sentence_idx); /* offset of first key field */
-
-    a_key = (alpha_key_t*) malloc(sizeof (alpha_key_t));
-    memset(a_key, 0, sizeof (alpha_key_t));
-
-    a_key->from = from;
-    a_key->to = to;
-    a_key->sentence_idx = sidx;
-
-
-
-    HASH_FIND(hh, *va, &a_key->sentence_idx, keylen, a);
-    if (a) {
-        a->alpha += inc;
-
-        if (a->alpha == 0) {
-            HASH_DEL(*va, a);
-            debug("Removing key %d: %d -> %d", a_key->sentence_idx, a_key->from, a_key->to);
-        } else {
-            HASH_REPLACE(hh, *va, sentence_idx, keylen, a, dummy);
-        }
-    } else {
-        a = (alpha_t*) malloc(sizeof (alpha_t));
-        memset(a, 0, sizeof (alpha_t)); /* zero fill */
-
-        a->from = from;
-        a->to = to;
-        a->sentence_idx = sidx;
-
-        a->alpha = inc;
-        a->v = embedding_feature(sent,from,to,NULL);
-
-        HASH_ADD(hh, *va, sentence_idx, keylen, a);
-
-
-        debug("%u keys in alpha", HASH_COUNT(*va));
-
-    }
+void mark_best_PerceptronModel(PerceptronModel model,int numit) {
+    model->best_numit = numit;
+    memcpy(model->embedding_w_best->data, model->embedding_w_temp->data, sizeof (float)*model->embedding_w_best->true_n);
 }

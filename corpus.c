@@ -83,8 +83,7 @@ DArray* get_embedding_pattern_parts() {
         }
 
         return embedding_pattern_parts;
-    }
-    else {
+    } else {
         return embedding_pattern_parts;
     }
 
@@ -312,7 +311,7 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
     vector bigvector = NULL;
 
     IS_ARC_VALID(from, to, sent->length);
-    
+
     DArray* patterns = get_embedding_pattern_parts();
 
     debug("Number of embedding patterns is %d", DArray_count(patterns));
@@ -385,11 +384,11 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
     }
 
 error:
-   return NULL;
+    return NULL;
 }
 
 void build_embedding_feature(FeaturedSentence sent, int from, int to) {
-    embedding_feature(sent,from,to, ((sent->feature_matrix_ref->matrix_data)[from][to])->continous_v);
+    embedding_feature(sent, from, to, ((sent->feature_matrix_ref->matrix_data)[from][to])->continous_v);
 }
 
 void set_FeatureMatrix(Hashmap* featuremap, CoNLLCorpus corpus, int sentence_idx) {
@@ -447,7 +446,11 @@ float** square_adjacency_matrix(int n, float init_value) {
         matrix[i] = (float*) malloc(sizeof (float) * n);
 
         for (int j = 0; j < n; j++) {
-            matrix[i][j] = init_value;
+
+            if (i == j)
+                matrix[i][j] = init_value;
+            else
+                matrix[i][j] = 0.0;
         }
 
         check_mem(matrix[i]);
@@ -459,7 +462,68 @@ error:
     exit(1);
 }
 
-void set_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, alpha_t **va, enum Kernel k) {
+float* get_embedding_matrix(CoNLLCorpus corpus, int sentence_idx, MKL_INT *m, MKL_INT *n) {
+    FeaturedSentence sentence = (FeaturedSentence) DArray_get(corpus->sentences, sentence_idx);
+    int length = sentence->length;
+
+    *m = (length + 1) * length - length;
+    *n = (sentence->feature_matrix_ref->matrix_data)[0][1]->continous_v->true_n;
+
+    debug("Embedding matrix is %d x %d", *m, *n);
+
+    float *matrix = (float*) mkl_malloc((*m) * (*n) * sizeof (float), 64);
+
+    if (matrix == NULL) {
+        log_err("Memory allocation error");
+        mkl_free(matrix);
+        exit(1);
+    }
+
+    int offset = 0;
+    for (int _from = 0; _from <= length; _from++) {
+        for (int _to = 1; _to <= length; _to++) {
+            if (_to != _from) {
+
+                vector embedding = (sentence->feature_matrix_ref->matrix_data)[_from][_to]->continous_v;
+
+                for (int i = 0; i < embedding->true_n; i++)
+                    matrix[offset++] = (embedding->data)[i];
+            }
+        }
+    }
+
+
+    check(offset == (*m) * (*n), "Matrix is not of the same size with the embeddings dimension x # of support vectors");
+
+    return matrix;
+
+error:
+    exit(1);
+}
+
+void set_adj_matrix_mkl(CoNLLCorpus corpus, int sentence_idx, const float* y) {
+    FeaturedSentence sentence = (FeaturedSentence) DArray_get(corpus->sentences, sentence_idx);
+    int length = sentence->length;
+
+    int offset = 0;
+    for (int _from = 0; _from <= length; _from++)
+        for (int _to = 1; _to <= length; _to++)
+            if (_to != _from)
+                (sentence->adjacency_matrix)[_from][_to] = y[offset++];
+
+    check(offset == (length + 1) * length - length, "Matrix is not of the same size with the embeddings dimension x # of support vectors");
+
+    return;
+error:
+    exit(1);
+}
+
+void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerceptron kp, bool use_avg_alpha) {
+
+    MKL_INT num_sv, narc, edim;
+    float* embedding_matrix;
+
+    num_sv = kp->M;
 
     FeaturedSentence sentence = (FeaturedSentence) DArray_get(corpus->sentences, sentence_idx);
     int length = sentence->length;
@@ -467,6 +531,89 @@ void set_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, alpha_t **va, en
     if (sentence->adjacency_matrix == NULL)
         sentence->adjacency_matrix = square_adjacency_matrix(length + 1, NEGATIVE_INFINITY);
 
+
+    if (num_sv > 0) {
+        embedding_matrix = get_embedding_matrix(corpus, sentence_idx, &narc, &edim);
+
+        if (kp->kernel == KPOLYNOMIAL) {
+            float *C = (float*) mkl_malloc(num_sv * narc * sizeof (float), 64);
+            float *r = (float*) mkl_malloc(num_sv * narc * sizeof (float), 64);
+            float *y = (float*) mkl_malloc(narc * sizeof (float), 64);
+
+            if (C == NULL || r == NULL || y == NULL) {
+                log_err("Memory allocation error");
+                mkl_free(C);
+                mkl_free(r);
+                mkl_free(y);
+                exit(1);
+            }
+
+            for (int i = 0; i < num_sv * narc; i++) {
+                C[i] = kp->bias;
+                r[i] = 0.;
+            }
+
+            //cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, 
+            //        narc, num_sv, edim, 1., embedding_matrix, edim, kp->kernel_matrix, num_sv, 1, C,num_sv);
+
+            debug("Matrix multiplication");
+            cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+                    narc, num_sv, edim, 1., embedding_matrix, edim, kp->kernel_matrix, edim, 1, C, num_sv);
+        
+
+            debug("Power it");
+            vsPowx(num_sv*narc, C, kp->power, r);
+
+            debug("Matrix vector mult");
+            if (use_avg_alpha)
+                cblas_sgemv(CblasRowMajor, CblasNoTrans, narc, num_sv, 1., r, num_sv, kp->alpha_avg, 1, 0., y, 1);
+            else
+                cblas_sgemv(CblasRowMajor, CblasNoTrans, narc, num_sv, 1., r, num_sv, kp->alpha, 1, 0., y, 1);
+            
+
+            debug("Set adjacency");
+            set_adj_matrix_mkl(corpus, sentence_idx, y);
+
+
+            mkl_free(C);
+            mkl_free(r);
+            mkl_free(y);
+            debug("C,r,y is freed");
+
+        } else if (kp->kernel == KLINEAR) {
+            log_err("Linear kernel is not implemented yet");
+            exit(1);
+        }
+
+
+        mkl_free(embedding_matrix);
+    } 
+}
+
+void set_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, KernelPerceptron kp) {
+
+    FeaturedSentence sentence = (FeaturedSentence) DArray_get(corpus->sentences, sentence_idx);
+    int length = sentence->length;
+
+    if (sentence->adjacency_matrix == NULL)
+        sentence->adjacency_matrix = square_adjacency_matrix(length + 1, NEGATIVE_INFINITY);
+
+    debug("%u x %u matrix", kp->M, kp->N);
+    float *y, *x, *r;
+    if (kp->M > 0) {
+        y = (float*) MKL_malloc(kp->M * sizeof (float), 64);
+        r = (float*) MKL_malloc(kp->M * sizeof (float), 64);
+        x = (float*) MKL_malloc(kp->N * sizeof (float), 64);
+
+        if (y == NULL || x == NULL || r == NULL) {
+            log_err("Memory allocation error");
+            mkl_free(y);
+            mkl_free(r);
+            mkl_free(x);
+
+            exit(1);
+        }
+    }
     for (int _from = 0; _from <= length; _from++)
         for (int _to = 1; _to <= length; _to++) {
             if (_to != _from) {
@@ -483,22 +630,33 @@ void set_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, alpha_t **va, en
                         log_err("NULL continuous vector");
                         exit(EXIT_FAILURE);
                     }
-                    alpha_t *a, *tmp;
-                    switch (k) {
+
+
+                    switch (kp->kernel) {
                         case KLINEAR:
                             break;
                         case KPOLYNOMIAL:
-                            debug("Compute over %u support vectors", HASH_COUNT(*va));
 
-                            HASH_ITER(hh, *va, a, tmp) {
-                                //FeaturedSentence sv_sent = (FeaturedSentence) DArray_get(corpus->sentences, a->sentence_idx);
+                            if (kp->M > 0) {
 
-                                //vector sv = embedding_feature(sv_sent,a->from,a->to, NULL);
-                             
+                                for (int i = 0; i < kp->M; i++) {
+                                    y[i] = kp->bias;
+                                    r[i] = 0;
+                                }
 
-                                (sentence->adjacency_matrix)[_from][_to] += a->alpha * polynomial(a->v, embedding, 1., 4);
-                                
-                                //vector_free(sv);
+                                for (int i = 0; i < kp->N; i++)
+                                    x[i] = (embedding->data)[i];
+
+                                cblas_sgemv(CblasRowMajor, CblasNoTrans, kp->M, kp->N, 1., kp->kernel_matrix, kp->N, x, 1, 1., y, 1);
+
+
+
+                                vsPowx(kp->M, y, kp->power, r);
+
+                                (sentence->adjacency_matrix)[_from][_to] = cblas_sdot(kp->M, r, 1, kp->alpha, 1);
+
+
+
                             }
 
                             break;
@@ -511,6 +669,12 @@ void set_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, alpha_t **va, en
                 }
             }
         }
+
+    if (kp->M > 0) {
+        mkl_free(y);
+        mkl_free(r);
+        mkl_free(x);
+    }
 }
 
 void build_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, vector embeddings_w, vector discrete_w) {

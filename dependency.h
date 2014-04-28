@@ -27,7 +27,7 @@ enum FeatureGroup {
     pword_ppos_cpos = 8,
     pword_ppos_cword = 9,
     pword_cword = 10,
-    ppos_cpos=11,
+    ppos_cpos = 11,
     ppos_pposP1_cposM1_cpos = 12,
     pposM1_ppos_cposM1_cpos = 13,
     ppos_pposP1_cpos_cposP1 = 14,
@@ -40,8 +40,7 @@ typedef enum FeatureGroup FeatureGroup;
 
 IntegerIndexedFeatures IntegerIndexedFeatures_create();
 
-
-struct FeatureKey{
+struct FeatureKey {
     FeatureGroup grp;
     char* value;
 };
@@ -52,7 +51,7 @@ typedef struct FeatureKey* FeatureKey;
  n1: n1++ if feature defines an arc
  n2: n2++ if feature occurs for a potential arc
  */
-struct FeatureValue{
+struct FeatureValue {
     uint32_t feature_id;
     uint32_t n1;
     uint32_t n2;
@@ -60,25 +59,24 @@ struct FeatureValue{
 
 typedef struct FeatureValue* FeatureValue;
 
-
-struct PerceptronModel{
+struct PerceptronModel {
     IntegerIndexedFeatures features;
-        
+
     vector discrete_w;
     vector discrete_w_avg;
     vector discrete_w_temp;
-    
+
     vector embedding_w;
     vector embedding_w_avg;
     vector embedding_w_temp;
     vector embedding_w_best;
-    
+
     int best_numit;
-	
+
     int c;
 
     size_t n;
-    
+
     bool use_discrete_features;
 };
 
@@ -88,7 +86,7 @@ typedef struct PerceptronModel* PerceptronModel;
 
 /**
     FeatureKey, FeatureValue creation functions.
-*/
+ */
 FeatureKey FeatureKey_create(FeatureGroup group, char* value);
 FeatureValue FeatureValue_create(uint32_t fid);
 
@@ -96,7 +94,7 @@ FeatureValue FeatureValue_create(uint32_t fid);
 int feature_equal(void *k1, void *k2);
 uint32_t feature_hash(void *f);
 
-PerceptronModel PerceptronModel_create( CoNLLCorpus training, IntegerIndexedFeatures iif );
+PerceptronModel PerceptronModel_create(CoNLLCorpus training, IntegerIndexedFeatures iif);
 void PerceptronModel_free(PerceptronModel model);
 
 void train_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, int numit, int max_rec);
@@ -110,19 +108,16 @@ void parse_and_dump(PerceptronModel mdl, FILE *fp, CoNLLCorpus corpus);
  * 
  * @param fp File pointer of model file
  * @param edimension Word embedding dimensions
- * @param epattern Embedding patterns
  * @param w Weight vector to be stored
  * @param best_numit Number of iterations for best performance.
- * @param transformation LINEAR|QUADRATIC transformation to be used.
  */
-void dump_model(FILE *fp, int edimension, const char *epattern, vector w,int best_numit,enum EmbeddingTranformation transformation);
+void dump_PerceptronModel(FILE *fp, int edimension, vector w, int best_numit);
 
 int* parse(FeaturedSentence sent);
-int* get_parents(const FeaturedSentence sent) ;
-int nmatch(const int* model, const int* empirical, int length) ;
+int* get_parents(const FeaturedSentence sent);
+int nmatch(const int* model, const int* empirical, int length);
 void printfarch(int *parent, int len);
 
-
-void update_alpha(alpha_t **va, uint32_t sidx, uint16_t from, uint16_t to, FeaturedSentence sent, float inc) ;
+void mark_best_PerceptronModel(PerceptronModel model, int numit);
 
 #endif

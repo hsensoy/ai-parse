@@ -7,10 +7,9 @@
 
 #ifndef PARSEUTIL_H
 #define	PARSEUTIL_H
-
-#include "corpus.h"
-
+#include "perceptron.h"
 #include "dependency.h"
+#include "corpus.h"
 
 #ifdef	__cplusplus
 extern "C" {
@@ -30,12 +29,10 @@ extern "C" {
  * @param train_sections_str Training sections
  * @param dev_sections_str Development sections
  * @param embedding_dimension Embedding dimension per word
- * @param embedding_pattern Embedding pattern to be used
- * @param tranformation Transformation to be applied on embedding vector.
  * 
  * @return Model trained
  */
-PerceptronModel optimize(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension, const char* embedding_pattern, enum EmbeddingTranformation tranformation) ;
+void* optimize(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension);
 
 void kernel_workbench(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension,  enum Kernel kernel, int bias, int degree);
 

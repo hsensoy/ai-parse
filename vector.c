@@ -557,22 +557,5 @@ error:
 }
  */
 
-alpha_t* create_alpha_idx(int sentence_idx, int from, int to, int length) {
 
-    IS_ARC_VALID(from, to, length);
-
-    alpha_t *idx = (alpha_t*) malloc(sizeof (alpha_t));
-
-    check_mem(idx);
-
-    idx->sentence_idx = sentence_idx;
-    idx->from = from;
-    idx->to = to;
-
-    return idx;
-
-error:
-    log_err("Error in allocating alpha index for sentence %d arch %d->%d", sentence_idx, from, to);
-    exit(1);
-}
 
