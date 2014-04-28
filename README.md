@@ -36,35 +36,58 @@ Target 'help' prints this message.
 Use Debug/Release for Mac OS X platforms
 
 ```
-make CONF=Release
+make CONF=Release-icc
 ```
 ### Linux
 Use Linux-Release for Mac OS X platforms
 
 ```
-make CONF=Release-Linux 
+make CONF=Release-icc-Linux	 
 ```
 
 ## Usage
 
 Dependency Parsing by ai-lab.
 
+Ensure that you run (or it is already in your .bashrc, .bash_profile,etc. files)
+
 ```
-$ dist/Release/GNU-MacOSX/ai-parse --help
-[INFO] (main:48) ai-parse v0.9.1 (Release)
+source $(INTEL_BASE)/bin/iccvars.sh intel64
+```
+
+It is highly probable that
+
+```
+source /opt/intel/bin/iccvars.sh intel64
+```
+
+If you wish execution to go parallel
+
+```
+export MKL_NUM_THREADS=<DEGREE OF PARALLELISM> 
+export MKL_DYNAMIC=true
+export OMP_NESTED=true
+```
+
+```
+$ dist/Release-icc/icc-MacOSX/ai-parse --help
+[INFO] (ai-parse.c:main:60) ai-parse v0.9.2 (Release)
 Usage: ai-parse [options] [[--] args]
 
     -h, --help                show this help message and exit
     -o, --modelname=<str>     Model name
     -p, --path=<str>          CoNLL base directory including sections
     -s, --stage=<str>         [ optimize | train | parse ]
-    -n, --maxnumit=<int>      Maximum number of iterations by perceptron. Default is 30
+    -n, --maxnumit=<int>      Maximum number of iterations by perceptron. Default is 50
     -t, --training=<str>      Training sections for optimize and train. Apply sections for parse
     -d, --development=<str>   Development sections for optimize
     -e, --epattern=<str>      Embedding Patterns
     -l, --edimension=<int>    Embedding dimension
     -m, --maxrec=<int>        Maximum number of training instance
     -x, --etransform=<str>    Embedding Transformation
+    -k, --kernel=<str>        Kernel Type
+    -a, --bias=<int>          Polynomial kernel additive term. Default is 1
+    -b, --degree=<str>        Degree of polynomial kernel. Default is 2
 ```
 
 **ai-parse** command is a super-command to (defined by `-s` parameter)
