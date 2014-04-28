@@ -13,18 +13,29 @@
 #include "dependency.h"
 #include <string.h>
 
-#define VERSION "v0.9.1"
+#define VERSION "v0.9.2"
 
 
-#define DEFAULT_MAX_NUMIT 30
+#define DEFAULT_MAX_NUMIT 50
 #define DEFAULT_TRAINING_SECTION_STR "2-22"
 #define DEFAULT_DEV_SECTION_STR "22"
 #define DEFAULT_EMBEDDING_TRANFORMATION QUADRATIC
+#define DEFAULT_KERNEL KLINEAR
 
 static const char *const usage[] = {
     "ai-parse [options] [[--] args]",
     NULL,
 };
+
+
+/**
+ * epattern is the embedding pattern.
+ * etransform is the embedding vector transformation to be applied.
+ * 
+ */
+const char *epattern = NULL;
+enum EmbeddingTranformation etransform = QUADRATIC;
+enum Kernel kernel = KLINEAR;
 
 /*
  * 
@@ -35,20 +46,21 @@ int main(int argc, char** argv) {
     int maxnumit = 0;
     int edimension = 0;
     int maxrec = -1;
+    int bias = 1;
+    int degree = 2;
     const char *stage = NULL;
     const char *training = NULL;
     const char *dev = NULL;
     const char *path = NULL;
-    const char *epattern = NULL;
     const char * etransform_str = NULL;
     const char *modelname = NULL;
-    enum EmbeddingTranformation etransform = QUADRATIC;
-    
-    #ifdef NDEBUG
+    const char *kernel_str = NULL;
+
+#ifdef NDEBUG
     log_info("ai-parse %s (Release)", VERSION);
-    #else
+#else
     log_info("ai-parse %s (Debug)", VERSION);
-    #endif
+#endif
 
     struct argparse_option options[] = {
         OPT_HELP(),
@@ -56,13 +68,16 @@ int main(int argc, char** argv) {
         OPT_STRING('o', "modelname", &modelname, "Model name", NULL),
         OPT_STRING('p', "path", &path, "CoNLL base directory including sections", NULL),
         OPT_STRING('s', "stage", &stage, "[ optimize | train | parse ]", NULL),
-        OPT_INTEGER('n', "maxnumit", &maxnumit, "Maximum number of iterations by perceptron. Default is 30", NULL),
+        OPT_INTEGER('n', "maxnumit", &maxnumit, "Maximum number of iterations by perceptron. Default is 50", NULL),
         OPT_STRING('t', "training", &training, "Training sections for optimize and train. Apply sections for parse", NULL),
         OPT_STRING('d', "development", &dev, "Development sections for optimize", NULL),
         OPT_STRING('e', "epattern", &epattern, "Embedding Patterns", NULL),
         OPT_INTEGER('l', "edimension", &edimension, "Embedding dimension", NULL),
         OPT_INTEGER('m', "maxrec", &maxrec, "Maximum number of training instance", NULL),
         OPT_STRING('x', "etransform", &etransform_str, "Embedding Transformation", NULL),
+        OPT_STRING('k', "kernel", &kernel_str, "Kernel Type", NULL),
+        OPT_INTEGER('a', "bias", &bias, "Polynomial kernel additive term. Default is 1", NULL),
+        OPT_STRING('b', "degree", &degree, "Degree of polynomial kernel. Default is 2", NULL),
         OPT_END(),
     };
     struct argparse argparse;
@@ -102,7 +117,7 @@ int main(int argc, char** argv) {
         check(epattern != NULL, "Embedding pattern is required for -s optimize,train");
 
         if (etransform_str == NULL) {
-            log_warn("Embedding transformation is set to be QUADRATIC");
+            log_info("Embedding transformation is set to be QUADRATIC");
 
             etransform = DEFAULT_EMBEDDING_TRANFORMATION;
         } else if (strcmp(etransform_str, "LINEAR") == 0) {
@@ -110,32 +125,59 @@ int main(int argc, char** argv) {
         } else if (strcmp(etransform_str, "QUADRATIC") == 0) {
             etransform = QUADRATIC;
         } else {
-            log_info("Unsupported transformation type for embedding %s", etransform_str);
-            goto error;
+            log_err("Unsupported transformation type for embedding %s", etransform_str);
         }
 
 
     }
 
+    if (kernel_str != NULL) {
+        if (strcmp(kernel_str, "POLYNOMIAL") == 0) {
+
+            log_info("Polynomial kernel will be used with bias %d and degree %d", bias, degree);
+            
+            kernel = KPOLYNOMIAL;
+
+            //kernel_workbench(maxnumit, maxrec, path, training, dev, edimension, kernel, bias, degree);
+            
+
+        } else {
+            log_err("Unsupported kernel type %s. Valid options are LINEAR and POLYNOMIAL.", kernel_str);
+            goto error;
+        }
+    }
+
     if (strcmp(stage, "optimize") == 0) {
+        void *model = optimize(maxnumit, maxrec, path, training, dev, edimension);
 
-        PerceptronModel model = optimize(maxnumit, maxrec, path, training, dev, edimension, epattern, etransform);
-
-
-        char* model_filename = (char*)malloc(sizeof(char) * (strlen(modelname) + 7));
+        char* model_filename = (char*) malloc(sizeof (char) * (strlen(modelname) + 7));
         check_mem(model_filename);
-        
+
         sprintf(model_filename, "%s.model", modelname);
-        
-        log_info("Model is dumped into %s file",model_filename);
-        
+
+        log_info("Model is dumped into %s file", model_filename);
+
         FILE *fp = fopen(model_filename, "w");
 
-        dump_model(fp, edimension, epattern, model->embedding_w_best,model->best_numit,etransform);
+        if (kernel == KLINEAR) {
+
+            PerceptronModel pmodel = (PerceptronModel) model;
+
+            dump_PerceptronModel(fp, edimension, pmodel->embedding_w_best, pmodel->best_numit);
+
+            PerceptronModel_free(pmodel);
+        }
+        else if (kernel == KPOLYNOMIAL) {
+            KernelPerceptron kpmodel = (KernelPerceptron) model;
+
+            //TODO: DUmp model into a file
+            //TODO: Free memory allocated by the file.
+
+            
+        }
+
 
         fclose(fp);
-
-        PerceptronModel_free(model);
 
 
 

@@ -12,13 +12,17 @@
 #include "hashmap.h"
 #include "datastructure.h"
 #include "vector.h"
-#include <stdbool.h>
+
 
 #define EXAMPLE_CONLL_DIR "/Users/husnusensoy/uparse/data/nlp/treebank/treebank-2.0/combined/conll"
 
 #define  STOP  "<STOP>"
 #define START  "*"
 //static const char* ROOT = "root";
+
+
+#define IS_ARC_VALID(from,to, length) check((from) != (to) && (from) <= (length) && (from) >= 0 && (to)>= 1 && (to) <= (length), "Arc between suspicious words %d to %d for sentence length %d", (from), (to), (length))
+
 
 #define MAX_SENT_LENGTH 20
 
@@ -36,48 +40,11 @@ typedef struct Word* Word;
 
 //Word parse_word( char* line, bool read_vector );
 
-struct FeatureVector {
-    DArray *discrete_v;
-    vector continous_v;
-};
 
-typedef struct FeatureVector* FeatureVector;
-
-struct FeatureMatrix{
-    FeatureVector** matrix_data;
-    uint16_t size;
-    uint32_t embedding_length;
-    bool has_discrete_features;
-};
-
-typedef  struct FeatureMatrix* FeatureMatrix;
 
 FeatureMatrix FeatureMatrix_create(int sent_length, uint32_t embedding_length, bool has_discrete_features);
 
-struct FeaturedSentence {
-    uint8_t section;
 
-    DArray* words;
-    int length;
-    //DArray* postags;
-    //DArray* embedding;
-    //DArray* parents;
-
-    //DArray ***feature_matrix;   // For each potential link from-->to you have a set of features.
-    //FeatureVector **feature_matrix;
-    
-    /**
-     * This is simply a reference to actual one used in CoNLLCorpus structure.
-     * This allows us to remote 
-     */
-    FeatureMatrix feature_matrix_ref;           
-    
-
-    float **adjacency_matrix; // Score of each potential link betweek words
-};
-
-
-typedef struct FeaturedSentence* FeaturedSentence;
 
 enum EmbeddingTranformation{
     QUADRATIC,
@@ -90,22 +57,28 @@ struct CoNLLCorpus {
 
     DArray *sentences;
 
-    DArray *embedding_pattern_parts;
     bool hasembeddings;
     DArray *disrete_patterns_parts;
 
     Word Root;
     size_t word_embedding_dimension;
     size_t transformed_embedding_length;
-    
-    enum EmbeddingTranformation embedding_transform;
 };
 
 typedef struct CoNLLCorpus* CoNLLCorpus;
 
 
+struct EmbeddingPattern {
+    int offset;
+    char node;
+    char subnode;
+};
 
-CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embedding_dimension, const char *embedding_pattern, enum EmbeddingTranformation transform, DArray* discrete_patterns) ;
+typedef struct EmbeddingPattern* EmbeddingPattern;
+
+
+
+CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embedding_dimension, DArray* discrete_patterns) ;
 void read_corpus(CoNLLCorpus coprus, bool build_feature_matrix);
 
 void free_CoNLLCorpus(CoNLLCorpus corpus, bool free_feature_matrix);
@@ -130,7 +103,11 @@ void free_featureMatrix(FeatureMatrix matrix);
 void free_feature_matrix(CoNLLCorpus corpus, int sentence_idx);
 
 void build_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, vector embeddings_w, vector discrete_w);
+void set_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, KernelPerceptron kp);
+void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerceptron kp, bool use_avg_alpha);
 
 void free_FeaturedSentence(CoNLLCorpus corpus, int sentence_idx);
+
+vector embedding_feature(FeaturedSentence sent, int from, int to, vector target);
 
 #endif

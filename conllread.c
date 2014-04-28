@@ -84,10 +84,10 @@ int __main(int argc, char **argv)
 
 	const char* EMBEDDING_PATTERN = "p-1v_p0v_p1v_c-1v_c0v_c1v_tl";
 	log_info("Creating CoNLL Corpus meta for %s",corpus2_dir);
-	CoNLLCorpus training = create_CoNLLCorpus(corpus2_dir,sect,25,EMBEDDING_PATTERN,QUADRATIC, NULL);
+	CoNLLCorpus training = create_CoNLLCorpus(corpus2_dir,sect,25, NULL);
 	
 	log_info("Creating CoNLL Corpus meta for %s",corpus2_dir);
-	CoNLLCorpus test = create_CoNLLCorpus(corpus2_dir,test_sec,25,EMBEDDING_PATTERN,QUADRATIC, NULL);
+	CoNLLCorpus test = create_CoNLLCorpus(corpus2_dir,test_sec,25, NULL);
 	
 	log_info("\tReading training corpus into memory");
 	read_corpus(training, false);

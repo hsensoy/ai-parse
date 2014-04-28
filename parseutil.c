@@ -1,11 +1,12 @@
 
 #include "util.h"
-#include "corpus.h"
 #include "dependency.h"
+#include "parseutil.h"
 #include <stdbool.h>
 
 #ifdef __GNUC__
 #include <signal.h>
+#include <sys/types.h>
 #endif
 
 static bool keepRunning = true;
@@ -18,7 +19,106 @@ void intHandler(int dummy) {
 #define MAX_IDLE_ITER 3
 #define MIN_DELTA 0.001
 
-PerceptronModel optimize(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension, const char* embedding_pattern, enum EmbeddingTranformation tranformation) {
+/**
+ * ai-parse.c file for actual storage allocation for those two variables
+ */
+extern const char *epattern;
+extern enum EmbeddingTranformation etransform;
+extern enum Kernel kernel;
+
+void kernel_workbench(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension, enum Kernel kernel, int bias, int degree) {
+    DArray *train_sections = parse_range(train_sections_str);
+    DArray *dev_sections = parse_range(dev_sections_str);
+    long match = 0, total = 0;
+
+    signal(SIGINT, intHandler);
+
+    log_info("Development sections to be used in %s: %s", path, join_range(dev_sections));
+
+    CoNLLCorpus dev = create_CoNLLCorpus(path, dev_sections, embedding_dimension, NULL);
+
+    log_info("Training sections to be used in %s: %s", path, join_range(train_sections));
+
+    CoNLLCorpus train = create_CoNLLCorpus(path, train_sections, embedding_dimension, NULL);
+
+    log_info("Reading training corpus");
+    read_corpus(train, false);
+
+
+    read_corpus(dev, false);
+    log_info("Dev corpus is loaded..");
+
+    alpha_t *va = NULL;
+
+    int i;
+
+    KernelPerceptron kp = create_PolynomialKernelPerceptron(4, 1.);
+
+    int max_sv = 0;
+    for (i = 0; i < DArray_count(train->sentences); i++) {
+
+
+        FeaturedSentence sent = (FeaturedSentence) DArray_get(train->sentences, i);
+
+
+        set_FeatureMatrix(NULL, train, i);
+
+        set_adjacency_matrix_fast(train, i, kp, false);
+
+        max_sv += (sent->length + 1) * sent->length - sent->length;
+
+        int *model = parse(sent);
+
+        //printfarch(model, sent->length);
+        debug("Parsing sentence %d of length %d is done", i, sent->length);
+        int *empirical = get_parents(sent);
+
+        //printfarch(empirical, sent->length);
+        int nm = nmatch(model, empirical, sent->length);
+
+        debug("Model matches %d arcs out of %d arcs", nm, sent->length);
+        if (nm != sent->length) { // root has no valid parent.
+            debug("Model matches %d arcs out of %d arcs", nm, sent->length);
+
+
+            for (int to = 1; to <= sent->length; to++) {
+
+                if (model[to] != empirical[to]) {
+
+                    update_alpha(kp, i, model[to], to, sent, -1);
+
+                    update_alpha(kp, i, empirical[to], to, sent, +1);
+                }
+
+
+            }
+        }
+
+        match += nm;
+        total += (sent->length);
+
+
+        if ((i + 1) % 100 == 0 && i != 0) {
+            log_info("Running training accuracy %lf after %d sentence.", (match * 1.) / total, i + 1);
+
+            unsigned nsv = kp->M;
+            log_info("%u (%f of total %d) support vectors", nsv, (nsv * 1.) / max_sv, max_sv);
+        }
+
+
+        free(model);
+        free(empirical);
+
+        //free_sentence_structures(sent);
+    }
+
+    log_info("Running training accuracy %lf", (match * 1.) / total);
+
+    free_CoNLLCorpus(dev, true);
+    free_CoNLLCorpus(train, true);
+}
+
+void* optimize(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension) {
     DArray *train_sections = parse_range(train_sections_str);
     DArray *dev_sections = parse_range(dev_sections_str);
 
@@ -26,11 +126,11 @@ PerceptronModel optimize(int max_numit, int max_rec, const char* path, const cha
 
     log_info("Development sections to be used in %s: %s", path, join_range(dev_sections));
 
-    CoNLLCorpus dev = create_CoNLLCorpus(path, dev_sections, embedding_dimension, embedding_pattern, tranformation, NULL);
+    CoNLLCorpus dev = create_CoNLLCorpus(path, dev_sections, embedding_dimension, NULL);
 
     log_info("Training sections to be used in %s: %s", path, join_range(train_sections));
 
-    CoNLLCorpus train = create_CoNLLCorpus(path, train_sections, embedding_dimension, embedding_pattern, tranformation, NULL);
+    CoNLLCorpus train = create_CoNLLCorpus(path, train_sections, embedding_dimension, NULL);
 
     log_info("Reading training corpus");
     read_corpus(train, false);
@@ -44,24 +144,36 @@ PerceptronModel optimize(int max_numit, int max_rec, const char* path, const cha
     check(numit_dev_avg != NULL, "Memory allocation failed for numit_dev_avg");
     check(numit_train_avg != NULL, "Memory allocation failed for numit_train_avg");
 
-    PerceptronModel model = PerceptronModel_create(train, NULL);
-
+    PerceptronModel model = NULL;
+    KernelPerceptron kmodel = NULL;
+    if (kernel == KLINEAR)
+        model = PerceptronModel_create(train, NULL);
+    else
+        kmodel = create_PolynomialKernelPerceptron(4, 1.);
 
 
     int numit;
 
     int best_iter = -1;
     float best_score = 0.0;
-    
+
     for (numit = 1; numit <= max_numit && keepRunning; numit++) {
         log_info("BEGIN: Iteration %d", numit);
 
-        train_perceptron_once(model, train, max_rec);
+        if (kernel == KLINEAR)
+            train_perceptron_once(model, train, max_rec);
+        else
+            train_once_KernelPerceptronModel(kmodel, train, max_rec);
+
 
         log_info("END: Iteration %d", numit);
-  
-       double dev_acc = test_perceptron_parser(model, dev, true, true);
-        //double train_acc = test_perceptron_parser(model, train, true, true);
+
+        double dev_acc;
+        if (kernel == KLINEAR)
+            dev_acc = test_perceptron_parser(model, dev, true, true);
+        else
+            dev_acc = test_KernelPerceptronModel(kmodel, dev, true);
+
         double train_acc = 0.0;
 
 
@@ -73,12 +185,14 @@ PerceptronModel optimize(int max_numit, int max_rec, const char* path, const cha
         if (best_score < dev_acc) {
             if (best_score + MIN_DELTA > dev_acc)
                 log_info("Improvement is less than %f", MIN_DELTA);
-            
+
             best_score = dev_acc;
             best_iter = numit;
-            
-            model->best_numit = numit;
-            memcpy(model->embedding_w_best->data, model->embedding_w_temp->data,sizeof(float)*model->embedding_w_best->true_n);
+
+            if (kernel == KLINEAR)
+                mark_best_PerceptronModel(model, numit);
+            else
+                mark_best_KernelPerceptronModel(kmodel, numit);
         }
 
         if (numit - best_iter > MAX_IDLE_ITER && STOP_ON_CONVERGE) {
@@ -91,11 +205,20 @@ PerceptronModel optimize(int max_numit, int max_rec, const char* path, const cha
     for (int i = 0; i < numit - 1; i++) {
         log_info("%d\t\t%f\t%f%s", i + 1, numit_dev_avg[i], numit_train_avg[i], (i + 1 == best_iter) ? " (*)" : "");
     }
+<<<<<<< HEAD
     
     //free_CoNLLCorpus(dev,true);
     //free_CoNLLCorpus(train,true);
+=======
+>>>>>>> release/0.9.2
 
-    return model;
+    //free_CoNLLCorpus(dev, true);
+    //free_CoNLLCorpus(train, true);
+
+    if (kernel == KLINEAR)
+        return (void*) model;
+    else
+        return (void*) kmodel;
 
 error:
     log_err("Memory allocation error");

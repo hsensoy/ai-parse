@@ -112,7 +112,7 @@ void vprint(vector v) {
 void vadd(vector target, const vector src, float mult) {
     check_vector_len(target, src);
 
-    #pragma ivdep
+#pragma ivdep
     for (int i = 0; i < target->true_n; i++) {
         (target->data)[i] += mult * (src->data)[i];
     }
@@ -121,15 +121,15 @@ void vadd(vector target, const vector src, float mult) {
 float vdot(vector v1, vector v2) {
     check_vector_len(v1, v2);
 
-    
+
     float sum = 0.0;
 
-    for (int i = 0; i < v1->true_n; i++)
+    for (int i = 0; i < v1->n; i++)
         sum += (v1->data)[i] * (v2->data)[i];
 
     return sum;
-    
-    
+
+
     //return cblas_sdot(v1->true_n, v1->data,1, v2->data,1);
 }
 
@@ -157,12 +157,38 @@ void vnorm(vector v, size_t n) {
     }
 }
 
+vector vlinear(vector target, vector src) {
+    if (target == NULL) {
+        vector vlinear = vector_create(src->true_n);
+
+        for (int i = 0; i < src->true_n; i++) {
+            vlinear->data[i] = src->data[i];
+        }
+
+        vector_free(src);
+
+        return vlinear;
+    } else {
+        check(target->true_n == src->true_n, "Target vector (%ld) and Source vector (%ld) should be equal dimension", target->true_n, src->true_n);
+        for (int i = 0; i < src->true_n; i++) {
+            target->data[i] = src->data[i];
+        }
+
+        vector_free(src);
+
+        return target;
+    }
+error:
+    exit(1);
+
+}
+
 vector vquadratic(vector target, vector src, float d) {
     float sqrt_of_2 = sqrt(2.);
     float sqrt_of_2d = sqrt(2. * d);
 
     int vquad_indx = 0;
-    
+
     if (target == NULL) {
         vector vquad = vector_create((src->true_n * (src->true_n + 3)) / 2);
 
@@ -185,8 +211,8 @@ vector vquadratic(vector target, vector src, float d) {
 
         return vquad;
     } else {
+        check(target->true_n == src->true_n, "Target vector (%ld) and Source vector (%ld) should be equal dimension", target->true_n, src->true_n);
 
-        
         for (int i = 0; i < src->true_n; i++) {
             target->data[vquad_indx++] = src->data[i] * src->data[i];
 
@@ -201,11 +227,14 @@ vector vquadratic(vector target, vector src, float d) {
 
             target->data[vquad_indx++] = sqrt_of_2d * src->data[i];
         }
-         
+
         vector_free(src);
 
         return target;
     }
+
+error:
+    exit(1);
 }
 
 /*
@@ -527,3 +556,6 @@ error:
     exit(1);
 }
  */
+
+
+

@@ -14,8 +14,10 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
-//#include "mkl.h"
+#include <math.h>
 
+#include "uthash.h"
+#include "debug.h"
 
 struct vector{
 	size_t n;
@@ -47,6 +49,7 @@ void vnorm(vector v, size_t n);
 
 void vprint(vector v);
 
+vector vlinear(vector target, vector src);
 vector vquadratic(vector target, vector src, float d);
 
 /**
@@ -57,5 +60,25 @@ vector vquadratic(vector target, vector src, float d);
  */
 vector vconcat(vector target, const vector v);
 
+/**
+ * 
+ * @param v1
+ * @param v2
+ * @return v1.v2
+ */
+static inline float linear(vector v1, vector v2){
+    return vdot(v1,v2);
+}
 
+/**
+ * 
+ * @param v1
+ * @param v2
+ * @param d 
+ * @param n
+ * @return (v1.v2 + d )^n
+ */ 
+static inline float polynomial(vector v1, vector v2, float d, int n){
+    return pow( vdot(v1,v2) + d ,n) ;
+}
 #endif

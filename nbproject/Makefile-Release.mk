@@ -44,6 +44,7 @@ OBJECTFILES= \
 	${OBJECTDIR}/hashmap.o \
 	${OBJECTDIR}/memman.o \
 	${OBJECTDIR}/parseutil.o \
+	${OBJECTDIR}/perceptron.o \
 	${OBJECTDIR}/stringalgo.o \
 	${OBJECTDIR}/util.o \
 	${OBJECTDIR}/vector.o
@@ -117,6 +118,11 @@ ${OBJECTDIR}/parseutil.o: parseutil.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.c) -O3 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/parseutil.o parseutil.c
+
+${OBJECTDIR}/perceptron.o: perceptron.c 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -O3 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/perceptron.o perceptron.c
 
 ${OBJECTDIR}/stringalgo.o: stringalgo.c 
 	${MKDIR} -p ${OBJECTDIR}

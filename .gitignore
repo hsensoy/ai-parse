@@ -3,6 +3,7 @@
 *.d
 
 dist
+conll_short
 
 # Model files
 *.model

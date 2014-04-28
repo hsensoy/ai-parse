@@ -21,7 +21,15 @@
                     <type>1</type>
                 </confElem>
                 <confElem>
-                    <name>Release-Linux</name>
+                    <name>Release-icc</name>
+                    <type>1</type>
+                </confElem>
+                <confElem>
+                    <name>Debug-icc</name>
+                    <type>1</type>
+                </confElem>
+                <confElem>
+                    <name>Release-icc-Linux</name>
                     <type>1</type>
                 </confElem>
             </confList>

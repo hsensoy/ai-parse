@@ -14,16 +14,16 @@ GREP=grep
 NM=nm
 CCADMIN=CCadmin
 RANLIB=ranlib
-CC=gcc
+CC=icc
 CCC=g++
 CXX=g++
 FC=gfortran
 AS=as
 
 # Macros
-CND_PLATFORM=GNU-MacOSX
+CND_PLATFORM=icc-MacOSX
 CND_DLIB_EXT=dylib
-CND_CONF=Debug
+CND_CONF=Debug-icc
 CND_DISTDIR=dist
 CND_BUILDDIR=build
 
@@ -51,7 +51,7 @@ OBJECTFILES= \
 
 
 # C Compiler Flags
-CFLAGS=
+CFLAGS=-std=gnu99 -DMKL_ILP64 -openmp -I/opt/intel/include -mkl -debug -O0
 
 # CC Compiler Flags
 CCFLAGS=
@@ -72,72 +72,72 @@ LDLIBSOPTIONS=
 
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ai-parse: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ai-parse ${OBJECTFILES} ${LDLIBSOPTIONS}
+	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ai-parse ${OBJECTFILES} ${LDLIBSOPTIONS} /opt/intel/mkl/lib/libmkl_intel_ilp64.a /opt/intel/mkl/lib/libmkl_core.a /opt/intel/mkl/lib/libmkl_intel_thread.a -lpthread -lm -debug -O0 -no_pie
 
 ${OBJECTDIR}/ai-parse.o: ai-parse.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ai-parse.o ai-parse.c
+	$(COMPILE.c) -g -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ai-parse.o ai-parse.c
 
 ${OBJECTDIR}/argparse.o: argparse.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/argparse.o argparse.c
+	$(COMPILE.c) -g -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/argparse.o argparse.c
 
 ${OBJECTDIR}/conllread.o: conllread.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/conllread.o conllread.c
+	$(COMPILE.c) -g -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/conllread.o conllread.c
 
 ${OBJECTDIR}/corpus.o: corpus.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/corpus.o corpus.c
+	$(COMPILE.c) -g -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/corpus.o corpus.c
 
 ${OBJECTDIR}/darray.o: darray.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/darray.o darray.c
+	$(COMPILE.c) -g -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/darray.o darray.c
 
 ${OBJECTDIR}/dependency.o: dependency.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/dependency.o dependency.c
+	$(COMPILE.c) -g -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/dependency.o dependency.c
 
 ${OBJECTDIR}/hashmap.o: hashmap.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/hashmap.o hashmap.c
+	$(COMPILE.c) -g -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/hashmap.o hashmap.c
 
 ${OBJECTDIR}/memman.o: memman.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/memman.o memman.c
+	$(COMPILE.c) -g -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/memman.o memman.c
 
 ${OBJECTDIR}/parseutil.o: parseutil.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/parseutil.o parseutil.c
+	$(COMPILE.c) -g -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/parseutil.o parseutil.c
 
 ${OBJECTDIR}/perceptron.o: perceptron.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/perceptron.o perceptron.c
+	$(COMPILE.c) -g -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/perceptron.o perceptron.c
 
 ${OBJECTDIR}/stringalgo.o: stringalgo.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/stringalgo.o stringalgo.c
+	$(COMPILE.c) -g -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/stringalgo.o stringalgo.c
 
 ${OBJECTDIR}/util.o: util.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/util.o util.c
+	$(COMPILE.c) -g -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/util.o util.c
 
 ${OBJECTDIR}/vector.o: vector.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/vector.o vector.c
+	$(COMPILE.c) -g -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/vector.o vector.c
 
 # Subprojects
 .build-subprojects:
