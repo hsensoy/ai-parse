@@ -205,12 +205,6 @@ void* optimize(int max_numit, int max_rec, const char* path, const char* train_s
     for (int i = 0; i < numit - 1; i++) {
         log_info("%d\t\t%f\t%f%s", i + 1, numit_dev_avg[i], numit_train_avg[i], (i + 1 == best_iter) ? " (*)" : "");
     }
-<<<<<<< HEAD
-    
-    //free_CoNLLCorpus(dev,true);
-    //free_CoNLLCorpus(train,true);
-=======
->>>>>>> release/0.9.2
 
     //free_CoNLLCorpus(dev, true);
     //free_CoNLLCorpus(train, true);
