@@ -51,7 +51,7 @@ OBJECTFILES= \
 
 
 # C Compiler Flags
-CFLAGS=-DNDEBUG -std=gnu99 -DMKL_ILP64 -openmp -I/ai/opt/intel/include -mkl
+CFLAGS=-DNDEBUG -std=gnu99 -DMKL_ILP64 -I/ai/opt/intel/include -mkl
 
 # CC Compiler Flags
 CCFLAGS=
@@ -72,7 +72,7 @@ LDLIBSOPTIONS=
 
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ai-parse: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ai-parse ${OBJECTFILES} ${LDLIBSOPTIONS} /ai/opt/intel/mkl/lib/intel64/libmkl_intel_ilp64.a /ai/opt/intel/mkl/lib/intel64/libmkl_core.a /ai/opt/intel/mkl/lib/intel64/libmkl_intel_thread.a -lpthread -lm
+	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ai-parse ${OBJECTFILES} ${LDLIBSOPTIONS} /ai/opt/intel/mkl/lib/intel64/libmkl_intel_ilp64.a /ai/opt/intel/mkl/lib/intel64/libmkl_core.a /ai/opt/intel/mkl/lib/intel64/libmkl_intel_thread.a
 
 ${OBJECTDIR}/ai-parse.o: ai-parse.c 
 	${MKDIR} -p ${OBJECTDIR}
