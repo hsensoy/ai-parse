@@ -11,6 +11,7 @@
 #include "debug.h"
 #include "parseutil.h"
 #include "dependency.h"
+#include "mkl.h"
 #include <string.h>
 
 #define VERSION "v0.9.2"
@@ -36,6 +37,7 @@ static const char *const usage[] = {
 const char *epattern = NULL;
 enum EmbeddingTranformation etransform = QUADRATIC;
 enum Kernel kernel = KLINEAR;
+int num_parallel_mkl_slaves = -1;
 
 /*
  * 
@@ -77,14 +79,28 @@ int main(int argc, char** argv) {
         OPT_STRING('x', "etransform", &etransform_str, "Embedding Transformation", NULL),
         OPT_STRING('k', "kernel", &kernel_str, "Kernel Type", NULL),
         OPT_INTEGER('a', "bias", &bias, "Polynomial kernel additive term. Default is 1", NULL),
+        OPT_INTEGER('c',"concurrency",&num_parallel_mkl_slaves,"Parallel MKL Slaves. Default is 90% of all machine cores",NULL),
         OPT_STRING('b', "degree", &degree, "Degree of polynomial kernel. Default is 2", NULL),
         OPT_END(),
     };
     struct argparse argparse;
     argparse_init(&argparse, options, usage, 0);
     argc = argparse_parse(&argparse, argc, argv);
-
-
+    
+    if (num_parallel_mkl_slaves == -1){
+        int max_threads = mkl_get_max_threads();
+        log_info("There are %d cores on machine",max_threads);
+        
+        num_parallel_mkl_slaves =(int) (max_threads * 0.9) ;
+        
+        if (num_parallel_mkl_slaves == 0 )
+            num_parallel_mkl_slaves = 1;
+   
+    }
+    
+    log_info("Number of MKL Slaves is set to be %d",num_parallel_mkl_slaves);
+    mkl_set_num_threads(num_parallel_mkl_slaves);
+    
     check(stage != NULL && (strcmp(stage, "optimize") == 0 || strcmp(stage, "train") == 0 || strcmp(stage, "parse") == 0),
             "Choose one of -s optimize, train, parse");
 
