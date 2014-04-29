@@ -454,7 +454,7 @@
             <pElem>/ai/opt/intel/include</pElem>
             <pElem>/ai/opt/intel/mkl/include</pElem>
           </incDir>
-          <commandLine>-DNDEBUG -std=gnu99 -DMKL_ILP64 -openmp -I/ai/opt/intel/include -mkl</commandLine>
+          <commandLine>-DNDEBUG -std=gnu99 -DMKL_ILP64 -I/ai/opt/intel/include -mkl</commandLine>
           <warningLevel>2</warningLevel>
         </cTool>
         <ccTool>
@@ -467,7 +467,7 @@
           <developmentMode>5</developmentMode>
         </asmTool>
         <linkerTool>
-          <commandLine>/ai/opt/intel/mkl/lib/intel64/libmkl_intel_ilp64.a /ai/opt/intel/mkl/lib/intel64/libmkl_core.a /ai/opt/intel/mkl/lib/intel64/libmkl_intel_thread.a -lpthread -lm</commandLine>
+          <commandLine>/ai/opt/intel/mkl/lib/intel64/libmkl_intel_ilp64.a /ai/opt/intel/mkl/lib/intel64/libmkl_core.a /ai/opt/intel/mkl/lib/intel64/libmkl_intel_thread.a</commandLine>
         </linkerTool>
       </compileType>
       <item path="ai-parse.c" ex="false" tool="0" flavor2="9">
