@@ -14,7 +14,7 @@
 #include "mkl.h"
 #include <string.h>
 
-#define VERSION "v0.9.2"
+#define VERSION "v0.9.3"
 
 
 #define DEFAULT_MAX_NUMIT 50
