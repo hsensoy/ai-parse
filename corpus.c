@@ -12,6 +12,7 @@
 
 #include "debug.h"
 #include "dependency.h"
+#include "memman.h"
 
 #include <string.h>
 
@@ -31,6 +32,7 @@ FeatureMatrix feature_matrix_singleton = NULL;
  */
 extern const char *epattern;
 extern enum EmbeddingTranformation etransform;
+
 
 DArray* embedding_pattern_parts = NULL;
 
@@ -470,15 +472,9 @@ float* get_embedding_matrix(CoNLLCorpus corpus, int sentence_idx, MKL_INT *m, MK
     *n = (sentence->feature_matrix_ref->matrix_data)[0][1]->continous_v->true_n;
 
     debug("Embedding matrix is %d x %d", *m, *n);
-
-    float *matrix = (float*) mkl_malloc((*m) * (*n) * sizeof (float), 64);
-
-    if (matrix == NULL) {
-        log_err("Memory allocation error");
-        mkl_free(matrix);
-        exit(1);
-    }
-
+    
+    float *matrix = (float*)mkl_64bytes_malloc((*m) * (*n) * sizeof (float));
+    
     int offset = 0;
     for (int _from = 0; _from <= length; _from++) {
         for (int _to = 1; _to <= length; _to++) {
@@ -536,18 +532,10 @@ void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerce
         embedding_matrix = get_embedding_matrix(corpus, sentence_idx, &narc, &edim);
 
         if (kp->kernel == KPOLYNOMIAL) {
-            float *C = (float*) mkl_malloc(num_sv * narc * sizeof (float), 64);
-            float *r = (float*) mkl_malloc(num_sv * narc * sizeof (float), 64);
-            float *y = (float*) mkl_malloc(narc * sizeof (float), 64);
-
-            if (C == NULL || r == NULL || y == NULL) {
-                log_err("Memory allocation error");
-                mkl_free(C);
-                mkl_free(r);
-                mkl_free(y);
-                exit(1);
-            }
-
+            float *C = (float*) mkl_64bytes_malloc(num_sv * narc * sizeof (float));
+            float *r = (float*) mkl_64bytes_malloc(num_sv * narc * sizeof (float));
+            float *y = (float*) mkl_64bytes_malloc(narc * sizeof (float));
+            
             for (int i = 0; i < num_sv * narc; i++) {
                 C[i] = kp->bias;
                 r[i] = 0.;
@@ -555,7 +543,8 @@ void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerce
 
             //cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, 
             //        narc, num_sv, edim, 1., embedding_matrix, edim, kp->kernel_matrix, num_sv, 1, C,num_sv);
-
+            
+            
             debug("Matrix multiplication");
             cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
                     narc, num_sv, edim, 1., embedding_matrix, edim, kp->kernel_matrix, edim, 1, C, num_sv);
@@ -601,18 +590,9 @@ void set_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, KernelPerceptron
     debug("%u x %u matrix", kp->M, kp->N);
     float *y, *x, *r;
     if (kp->M > 0) {
-        y = (float*) MKL_malloc(kp->M * sizeof (float), 64);
-        r = (float*) MKL_malloc(kp->M * sizeof (float), 64);
-        x = (float*) MKL_malloc(kp->N * sizeof (float), 64);
-
-        if (y == NULL || x == NULL || r == NULL) {
-            log_err("Memory allocation error");
-            mkl_free(y);
-            mkl_free(r);
-            mkl_free(x);
-
-            exit(1);
-        }
+        y = (float*) mkl_64bytes_malloc(kp->M * sizeof (float));
+        r = (float*) mkl_64bytes_malloc(kp->M * sizeof (float));
+        x = (float*) mkl_64bytes_malloc(kp->N * sizeof (float));
     }
     for (int _from = 0; _from <= length; _from++)
         for (int _to = 1; _to <= length; _to++) {

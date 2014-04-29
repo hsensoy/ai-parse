@@ -22,6 +22,9 @@ size_t aligned_size(size_t n);
 float* alloc_aligned(size_t n);
 
 
+void* mkl_64bytes_malloc(size_t bytes);
+void* mkl_64bytes_realloc(void* ptr, size_t newbytes);
+
 
 
 #endif

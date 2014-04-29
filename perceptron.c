@@ -3,6 +3,7 @@
 #include "uthash.h"
 #include "corpus.h"
 #include "dependency.h"
+#include "memman.h"
 
 KernelPerceptron create_PolynomialKernelPerceptron(int power, float bias) {
 
@@ -85,27 +86,27 @@ void update_alpha(KernelPerceptron kp, uint32_t sidx, uint16_t from, uint16_t to
 
         if (n == 0) {
             kp->N = v->true_n;
-            kp->kernel_matrix = (float*) mkl_malloc( (n + 1) * v->true_n * sizeof(float), 64);
+            kp->kernel_matrix = (float*) mkl_64bytes_malloc( (n + 1) * v->true_n * sizeof(float));
 
             for (int i = 0; i < v->true_n; i++)
                 (kp->kernel_matrix)[n * v->true_n + i] = v->data[i];
                 
             vector_free(v);
                 
-            kp->alpha = (float*) mkl_malloc((n + 1) * sizeof(float), 64);
-            kp->beta = (float*) mkl_malloc((n + 1) * sizeof(float), 64);
+            kp->alpha = (float*) mkl_64bytes_malloc((n + 1) * sizeof(float));
+            kp->beta = (float*) mkl_64bytes_malloc((n + 1) * sizeof(float));
             (kp->alpha)[n] = inc;
             (kp->beta)[n] = inc * kp->c;
         } else {
             check(kp->N == v->true_n, "%u dimensional embedding does not confirm with the previous embedding size (%ul)",v->true_n,kp->N);
             
-            kp->kernel_matrix = (float*) mkl_realloc(kp->kernel_matrix, (n + 1) * v->true_n * sizeof(float));
+            kp->kernel_matrix = (float*) mkl_64bytes_realloc(kp->kernel_matrix, (n + 1) * v->true_n * sizeof(float));
 
             for (int i = 0; i < v->true_n; i++)
                 (kp->kernel_matrix)[n * v->true_n + i] = v->data[i];
                 
-            kp->alpha = (float*) mkl_realloc(kp->alpha, (n + 1) * sizeof(float));
-            kp->beta = (float*) mkl_realloc(kp->alpha, (n + 1) * sizeof(float));
+            kp->alpha = (float*) mkl_64bytes_realloc(kp->alpha, (n + 1) * sizeof(float));
+            kp->beta = (float*) mkl_64bytes_realloc(kp->alpha, (n + 1) * sizeof(float));
             (kp->alpha)[n] = inc;
             (kp->beta)[n] = inc * kp->c;
         }
@@ -142,7 +143,7 @@ void update_average_alpha(KernelPerceptron kp){
         mkl_free(kp->alpha_avg);
     }
     
-    kp->alpha_avg = (float*) mkl_malloc((kp->M) * sizeof(float), 64);
+    kp->alpha_avg = (float*) mkl_64bytes_malloc((kp->M) * sizeof(float));
     
     for (int i = 0; i < (kp->M); i++) {
         
@@ -292,8 +293,8 @@ double test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus
         mkl_free(kmodel->best_kernel_matrix);
     }
     
-    kmodel->best_alpha_avg = (float*) mkl_malloc((kmodel->M) * sizeof(float), 64);
-    kmodel->best_kernel_matrix = (float*) mkl_malloc((kmodel->N) * (kmodel->M) * sizeof(float), 64);
+    kmodel->best_alpha_avg = (float*) mkl_64bytes_malloc((kmodel->M) * sizeof(float));
+    kmodel->best_kernel_matrix = (float*) mkl_64bytes_malloc((kmodel->N) * (kmodel->M) * sizeof(float));
     
     for (int i = 0; i < (kmodel->M); i++) {
         
