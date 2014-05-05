@@ -25,98 +25,7 @@ void intHandler(int dummy) {
 extern const char *epattern;
 extern enum EmbeddingTranformation etransform;
 extern enum Kernel kernel;
-
-void kernel_workbench(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension, enum Kernel kernel, int bias, int degree) {
-    DArray *train_sections = parse_range(train_sections_str);
-    DArray *dev_sections = parse_range(dev_sections_str);
-    long match = 0, total = 0;
-
-    signal(SIGINT, intHandler);
-
-    log_info("Development sections to be used in %s: %s", path, join_range(dev_sections));
-
-    CoNLLCorpus dev = create_CoNLLCorpus(path, dev_sections, embedding_dimension, NULL);
-
-    log_info("Training sections to be used in %s: %s", path, join_range(train_sections));
-
-    CoNLLCorpus train = create_CoNLLCorpus(path, train_sections, embedding_dimension, NULL);
-
-    log_info("Reading training corpus");
-    read_corpus(train, false);
-
-
-    read_corpus(dev, false);
-    log_info("Dev corpus is loaded..");
-
-    alpha_t *va = NULL;
-
-    int i;
-
-    KernelPerceptron kp = create_PolynomialKernelPerceptron(4, 1.);
-
-    int max_sv = 0;
-    for (i = 0; i < DArray_count(train->sentences); i++) {
-
-
-        FeaturedSentence sent = (FeaturedSentence) DArray_get(train->sentences, i);
-
-
-        set_FeatureMatrix(NULL, train, i);
-
-        set_adjacency_matrix_fast(train, i, kp, false);
-
-        max_sv += (sent->length + 1) * sent->length - sent->length;
-
-        int *model = parse(sent);
-
-        //printfarch(model, sent->length);
-        debug("Parsing sentence %d of length %d is done", i, sent->length);
-        int *empirical = get_parents(sent);
-
-        //printfarch(empirical, sent->length);
-        int nm = nmatch(model, empirical, sent->length);
-
-        debug("Model matches %d arcs out of %d arcs", nm, sent->length);
-        if (nm != sent->length) { // root has no valid parent.
-            debug("Model matches %d arcs out of %d arcs", nm, sent->length);
-
-
-            for (int to = 1; to <= sent->length; to++) {
-
-                if (model[to] != empirical[to]) {
-
-                    update_alpha(kp, i, model[to], to, sent, -1);
-
-                    update_alpha(kp, i, empirical[to], to, sent, +1);
-                }
-
-
-            }
-        }
-
-        match += nm;
-        total += (sent->length);
-
-
-        if ((i + 1) % 100 == 0 && i != 0) {
-            log_info("Running training accuracy %lf after %d sentence.", (match * 1.) / total, i + 1);
-
-            unsigned nsv = kp->M;
-            log_info("%u (%f of total %d) support vectors", nsv, (nsv * 1.) / max_sv, max_sv);
-        }
-
-
-        free(model);
-        free(empirical);
-
-        //free_sentence_structures(sent);
-    }
-
-    log_info("Running training accuracy %lf", (match * 1.) / total);
-
-    free_CoNLLCorpus(dev, true);
-    free_CoNLLCorpus(train, true);
-}
+extern const char *modelname;
 
 void* optimize(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension) {
     DArray *train_sections = parse_range(train_sections_str);
@@ -158,7 +67,7 @@ void* optimize(int max_numit, int max_rec, const char* path, const char* train_s
     float best_score = 0.0;
 
     for (numit = 1; numit <= max_numit && keepRunning; numit++) {
-        log_info("BEGIN: Iteration %d", numit);
+        log_info("BEGIN-TRAIN: Iteration %d", numit);
 
         if (kernel == KLINEAR)
             train_perceptron_once(model, train, max_rec);
@@ -166,14 +75,16 @@ void* optimize(int max_numit, int max_rec, const char* path, const char* train_s
             train_once_KernelPerceptronModel(kmodel, train, max_rec);
 
 
-        log_info("END: Iteration %d", numit);
+        log_info("END-TRAIN: Iteration %d", numit);
 
         double dev_acc;
+        log_info("BEGIN-TEST: Iteration %d", numit);
         if (kernel == KLINEAR)
             dev_acc = test_perceptron_parser(model, dev, true, true);
         else
-            dev_acc = test_KernelPerceptronModel(kmodel, dev, true);
-
+            dev_acc = test_KernelPerceptronModel(kmodel, dev, true,NULL);
+        log_info("END-TEST: Iteration %d", numit);
+        
         double train_acc = 0.0;
 
 
@@ -184,7 +95,7 @@ void* optimize(int max_numit, int max_rec, const char* path, const char* train_s
 
         if (best_score < dev_acc) {
             if (best_score + MIN_DELTA > dev_acc)
-                log_info("Improvement is less than %f", MIN_DELTA);
+                log_warn("Improvement is less than %f", MIN_DELTA);
 
             best_score = dev_acc;
             best_iter = numit;
@@ -219,4 +130,40 @@ error:
 
     exit(1);
 
+}
+
+void parseall(const KernelPerceptron model, const char* path, const char* test_sections_str, int embedding_dimension){
+    DArray *test_sections = parse_range(test_sections_str);
+
+    signal(SIGINT, intHandler);
+
+    log_info("Test sections to be used in %s: %s", path, join_range(test_sections));
+
+    CoNLLCorpus test = create_CoNLLCorpus(path, test_sections, embedding_dimension, NULL);
+
+    log_info("Reading test corpus");
+    read_corpus(test, false);
+
+    int numit;
+
+    int best_iter = -1;
+    float best_score = 0.0;
+
+   char* output_filename = (char*) malloc(sizeof (char) * (strlen(modelname) + 8));
+   check_mem(output_filename);
+
+    sprintf(output_filename, "%s.output", modelname);
+    FILE *fp = fopen(output_filename,"w");
+    double test_accuracy = test_KernelPerceptronModel(model, test, true, fp);
+    fclose(fp);
+
+    log_info("Accuracy(test): %f", test_accuracy);
+
+    return;
+error:
+    log_err("Memory allocation error");
+
+    exit(1);
+    
+    
 }

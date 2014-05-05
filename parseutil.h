@@ -34,7 +34,7 @@ extern "C" {
  */
 void* optimize(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension);
 
-void kernel_workbench(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension,  enum Kernel kernel, int bias, int degree);
+void parseall(const KernelPerceptron model, const char* path, const char* test_sections_str, int embedding_dimension);
 
 #endif	/* PARSEUTIL_H */
 

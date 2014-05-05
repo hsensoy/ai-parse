@@ -161,6 +161,7 @@ vector vlinear(vector target, vector src) {
     if (target == NULL) {
         vector vlinear = vector_create(src->true_n);
 
+        #pragma ivdep
         for (int i = 0; i < src->true_n; i++) {
             vlinear->data[i] = src->data[i];
         }
@@ -170,6 +171,8 @@ vector vlinear(vector target, vector src) {
         return vlinear;
     } else {
         check(target->true_n == src->true_n, "Target vector (%ld) and Source vector (%ld) should be equal dimension", target->true_n, src->true_n);
+        
+        #pragma ivdep
         for (int i = 0; i < src->true_n; i++) {
             target->data[i] = src->data[i];
         }
