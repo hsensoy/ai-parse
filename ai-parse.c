@@ -14,7 +14,7 @@
 #include "mkl.h"
 #include <string.h>
 
-#define VERSION "v0.9.3"
+#define VERSION "v0.9.4"
 
 
 #define DEFAULT_MAX_NUMIT 50
@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     int edimension = 0;
     int maxrec = -1;
     int bias = 1;
-    int degree = 2;
+    int degree = 4;
     const char *stage = NULL;
     const char *training = NULL;
     const char *dev = NULL;
