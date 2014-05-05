@@ -52,7 +52,7 @@ OBJECTFILES= \
 
 
 # C Compiler Flags
-CFLAGS=-DNDEBUG -std=gnu99 -DMKL_ILP64 -I/ai/opt/intel/include -mkl -debug -O0
+CFLAGS=-std=gnu99 -DMKL_ILP64 -I/ai/opt/intel/include -mkl -parallel -debug -O0
 
 # CC Compiler Flags
 CCFLAGS=

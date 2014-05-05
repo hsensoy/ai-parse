@@ -585,7 +585,7 @@
             <pElem>/opt/intel/include</pElem>
             <pElem>/opt/intel/mkl/include</pElem>
           </incDir>
-          <commandLine>-DNDEBUG -std=gnu99 -DMKL_ILP64 -I/ai/opt/intel/include -mkl -debug -O0</commandLine>
+          <commandLine>-std=gnu99 -DMKL_ILP64 -I/ai/opt/intel/include -mkl -parallel -debug -O0</commandLine>
           <warningLevel>2</warningLevel>
         </cTool>
         <ccTool>

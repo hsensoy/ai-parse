@@ -201,6 +201,8 @@ int main(int argc, char** argv) {
 
         sprintf(model_filename, "%s.model", modelname);
         FILE *fp = fopen(model_filename, "r");
+        
+        check(fp != NULL, "%s could not be opened",model_filename);
 
         KernelPerceptron model = load_KernelPerceptronModel(fp);
         
