@@ -349,6 +349,8 @@ KernelPerceptron load_KernelPerceptronModel(FILE *fp) {
     enum Kernel type;
 
     int n = fscanf(fp, "kernel=%d\n", &type);
+    
+    debug("Kernel type is %d",type);
 
     check(n == 1, "No kernel type found in file");
 
@@ -359,14 +361,22 @@ KernelPerceptron load_KernelPerceptronModel(FILE *fp) {
 
     n = fscanf(fp, "power=%d\n", &power);
     check(n == 1 && power > 0, "No power found for polynomial model");
+    
+    debug("Power is %d",power);
     n = fscanf(fp, "bias=%f\n", &bias);
     check(n == 1, "No bias found for polynomial model");
+    debug("Bias is %f",bias);
 
     KernelPerceptron model = create_PolynomialKernelPerceptron(power, bias);
 
     n = fscanf(fp, "nsv=%lu\nedim=%lu\nnumit=%d\nc=%d\n", &(model->M), &(model->N), &(model->best_numit), &(model->c));
     check(n == 4, "Num s.v. or embedding dimension or numit or c is missing in model file");
 
+    debug("Number of Support Vectors are %lu",model->M);
+    debug("Embedding dimensiob is %lu",model->N);
+    debug("Number of Iterations are %d",model->best_numit);
+    debug("C is %d",model->c);
+    
     model->alpha_avg = (float*) mkl_64bytes_malloc(model->M * sizeof (float));
     model->alpha = (float*) mkl_64bytes_malloc(model->M * sizeof (float));
     size_t real_idx;
