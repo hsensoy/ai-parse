@@ -5,6 +5,7 @@
                    displayName="Header Files"
                    projectFiles="true">
       <itemPath>argparse.h</itemPath>
+      <itemPath>conll.h</itemPath>
       <itemPath>corpus.h</itemPath>
       <itemPath>darray.h</itemPath>
       <itemPath>datastructure.h</itemPath>
@@ -32,9 +33,10 @@
                    projectFiles="true">
       <itemPath>ai-parse.c</itemPath>
       <itemPath>argparse.c</itemPath>
-      <itemPath>conllread.c</itemPath>
+      <itemPath>conll.c</itemPath>
       <itemPath>corpus.c</itemPath>
       <itemPath>darray.c</itemPath>
+      <itemPath>debug.c</itemPath>
       <itemPath>dependency.c</itemPath>
       <itemPath>hashmap.c</itemPath>
       <itemPath>memman.c</itemPath>
@@ -66,7 +68,9 @@
       </item>
       <item path="argparse.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="conllread.c" ex="false" tool="0" flavor2="0">
+      <item path="conll.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="conll.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="corpus.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -77,6 +81,8 @@
       <item path="darray.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="datastructure.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="debug.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="debug.h" ex="false" tool="3" flavor2="0">
       </item>
@@ -151,7 +157,9 @@
       </item>
       <item path="argparse.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="conllread.c" ex="false" tool="0" flavor2="0">
+      <item path="conll.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="conll.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="corpus.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -162,6 +170,8 @@
       <item path="darray.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="datastructure.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="debug.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="debug.h" ex="false" tool="3" flavor2="0">
       </item>
@@ -221,7 +231,7 @@
             <pElem>/opt/intel/include</pElem>
             <pElem>/opt/intel/mkl/include</pElem>
           </incDir>
-          <commandLine>-DNDEBUG -std=gnu99 -DMKL_ILP64 -openmp -I/opt/intel/include -mkl</commandLine>
+          <commandLine>-DNDEBUG -std=gnu99 -DMKL_ILP64 -I/opt/intel/include -mkl -parallel -par-num-threads=2</commandLine>
           <warningLevel>2</warningLevel>
         </cTool>
         <ccTool>
@@ -234,7 +244,7 @@
           <developmentMode>5</developmentMode>
         </asmTool>
         <linkerTool>
-          <commandLine>/opt/intel/mkl/lib/libmkl_intel_ilp64.a /opt/intel/mkl/lib/libmkl_core.a /opt/intel/mkl/lib/libmkl_intel_thread.a -lpthread -lm</commandLine>
+          <commandLine>/opt/intel/mkl/lib/libmkl_intel_ilp64.a /opt/intel/mkl/lib/libmkl_core.a /opt/intel/mkl/lib/libmkl_intel_thread.a</commandLine>
         </linkerTool>
       </compileType>
       <item path="ai-parse.c" ex="false" tool="0" flavor2="9">
@@ -247,9 +257,9 @@
       </item>
       <item path="argparse.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="conllread.c" ex="false" tool="0" flavor2="9">
-        <cTool>
-        </cTool>
+      <item path="conll.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="conll.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="corpus.c" ex="false" tool="0" flavor2="9">
         <cTool>
@@ -264,6 +274,8 @@
       <item path="darray.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="datastructure.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="debug.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="debug.h" ex="false" tool="3" flavor2="0">
       </item>
@@ -336,7 +348,7 @@
             <pElem>/opt/intel/include</pElem>
             <pElem>/opt/intel/mkl/include</pElem>
           </incDir>
-          <commandLine>-std=gnu99 -DMKL_ILP64 -openmp -I/opt/intel/include -mkl -debug -O0</commandLine>
+          <commandLine>-std=gnu99 -DMKL_ILP64 -openmp -I/opt/intel/include -mkl -O2 -parallel -vec-report4 -par-report3</commandLine>
           <warningLevel>2</warningLevel>
         </cTool>
         <ccTool>
@@ -362,9 +374,9 @@
       </item>
       <item path="argparse.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="conllread.c" ex="false" tool="0" flavor2="9">
-        <cTool>
-        </cTool>
+      <item path="conll.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="conll.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="corpus.c" ex="false" tool="0" flavor2="9">
         <cTool>
@@ -379,6 +391,8 @@
       <item path="darray.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="datastructure.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="debug.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="debug.h" ex="false" tool="3" flavor2="0">
       </item>
@@ -454,7 +468,7 @@
             <pElem>/ai/opt/intel/include</pElem>
             <pElem>/ai/opt/intel/mkl/include</pElem>
           </incDir>
-          <commandLine>-DNDEBUG -std=gnu99 -DMKL_ILP64 -I/ai/opt/intel/include -mkl</commandLine>
+          <commandLine>-DNDEBUG -std=gnu99 -DMKL_ILP64 -I/ai/opt/intel/include -mkl -parallel -par-num-threads=8</commandLine>
           <warningLevel>2</warningLevel>
         </cTool>
         <ccTool>
@@ -480,9 +494,9 @@
       </item>
       <item path="argparse.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="conllread.c" ex="false" tool="0" flavor2="9">
-        <cTool>
-        </cTool>
+      <item path="conll.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="conll.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="corpus.c" ex="false" tool="0" flavor2="9">
         <cTool>
@@ -497,6 +511,8 @@
       <item path="darray.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="datastructure.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="debug.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="debug.h" ex="false" tool="3" flavor2="0">
       </item>
@@ -527,6 +543,125 @@
       <item path="parseutil.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="perceptron.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="perceptron.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="stringalgo.c" ex="false" tool="0" flavor2="9">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="stringalgo.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="utarray.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="uthash.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="util.c" ex="false" tool="0" flavor2="9">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="util.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="utlist.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="utstring.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="vector.c" ex="false" tool="0" flavor2="9">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="vector.h" ex="false" tool="3" flavor2="0">
+      </item>
+    </conf>
+    <conf name="Debug-icc-Linux" type="1">
+      <toolsSet>
+        <compilerSet>Intel_1|Intel</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <compileType>
+        <cTool>
+          <incDir>
+            <pElem>/opt/intel/include</pElem>
+            <pElem>/opt/intel/mkl/include</pElem>
+          </incDir>
+          <commandLine>-DNDEBUG -std=gnu99 -DMKL_ILP64 -I/ai/opt/intel/include -mkl -debug -O0</commandLine>
+          <warningLevel>2</warningLevel>
+        </cTool>
+        <ccTool>
+          <developmentMode>5</developmentMode>
+        </ccTool>
+        <fortranCompilerTool>
+          <developmentMode>5</developmentMode>
+        </fortranCompilerTool>
+        <asmTool>
+          <developmentMode>5</developmentMode>
+        </asmTool>
+        <linkerTool>
+          <commandLine>/ai/opt/intel/mkl/lib/intel64/libmkl_intel_ilp64.a /ai/opt/intel/mkl/lib/intel64/libmkl_core.a /ai/opt/intel/mkl/lib/intel64/libmkl_intel_thread.a -debug -O0 -no_pie</commandLine>
+        </linkerTool>
+      </compileType>
+      <item path="ai-parse.c" ex="false" tool="0" flavor2="9">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="argparse.c" ex="false" tool="0" flavor2="9">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="argparse.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="conll.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="conll.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="corpus.c" ex="false" tool="0" flavor2="9">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="corpus.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="darray.c" ex="false" tool="0" flavor2="9">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="darray.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="datastructure.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="debug.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="debug.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="dependency.c" ex="false" tool="0" flavor2="9">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="dependency.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="hashmap.c" ex="false" tool="0" flavor2="9">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="hashmap.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="memman.c" ex="false" tool="0" flavor2="9">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="memman.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="minunit.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="parseutil.c" ex="false" tool="0" flavor2="9">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="parseutil.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="perceptron.c" ex="false" tool="0" flavor2="9">
+        <cTool>
+        </cTool>
       </item>
       <item path="perceptron.h" ex="false" tool="3" flavor2="0">
       </item>

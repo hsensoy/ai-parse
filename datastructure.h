@@ -86,29 +86,32 @@ enum Kernel{
     KPOLYNOMIAL 
 };
 
+
 struct KernelPerceptron{
+    float bias;
+    int power;
     
-    MKL_INT M;
-    MKL_INT N;
-    
+    size_t M;
     float* alpha;
     float* alpha_avg;
+    float* kernel_matrix;
+    
+    enum Kernel kernel;
+    
+    size_t N;
+    
+    
     float* beta;
     
 
     int c;
-    float* kernel_matrix;
+    
     
     float* best_alpha_avg;
     int best_numit;
     float* best_kernel_matrix;
-    
-    enum Kernel kernel;
-    
-    int power;
-    float bias;
-    
-    
+    size_t best_m;
+ 
     alpha_t *arch_to_index_map;
 };
 

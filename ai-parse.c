@@ -14,13 +14,13 @@
 #include "mkl.h"
 #include <string.h>
 
-#define VERSION "v0.9.3"
+#define VERSION "v0.9.4"
 
 
 #define DEFAULT_MAX_NUMIT 50
 #define DEFAULT_TRAINING_SECTION_STR "2-22"
 #define DEFAULT_DEV_SECTION_STR "22"
-#define DEFAULT_EMBEDDING_TRANFORMATION QUADRATIC
+#define DEFAULT_EMBEDDING_TRANFORMATION LINEAR
 #define DEFAULT_KERNEL KLINEAR
 
 static const char *const usage[] = {
@@ -38,6 +38,7 @@ const char *epattern = NULL;
 enum EmbeddingTranformation etransform = QUADRATIC;
 enum Kernel kernel = KLINEAR;
 int num_parallel_mkl_slaves = -1;
+const char *modelname = NULL;
 
 /*
  * 
@@ -49,13 +50,12 @@ int main(int argc, char** argv) {
     int edimension = 0;
     int maxrec = -1;
     int bias = 1;
-    int degree = 2;
+    int degree = 4;
     const char *stage = NULL;
     const char *training = NULL;
     const char *dev = NULL;
     const char *path = NULL;
     const char * etransform_str = NULL;
-    const char *modelname = NULL;
     const char *kernel_str = NULL;
 
 #ifdef NDEBUG
@@ -79,28 +79,28 @@ int main(int argc, char** argv) {
         OPT_STRING('x', "etransform", &etransform_str, "Embedding Transformation", NULL),
         OPT_STRING('k', "kernel", &kernel_str, "Kernel Type", NULL),
         OPT_INTEGER('a', "bias", &bias, "Polynomial kernel additive term. Default is 1", NULL),
-        OPT_INTEGER('c',"concurrency",&num_parallel_mkl_slaves,"Parallel MKL Slaves. Default is 90% of all machine cores",NULL),
+        OPT_INTEGER('c', "concurrency", &num_parallel_mkl_slaves, "Parallel MKL Slaves. Default is 90% of all machine cores", NULL),
         OPT_STRING('b', "degree", &degree, "Degree of polynomial kernel. Default is 2", NULL),
         OPT_END(),
     };
     struct argparse argparse;
     argparse_init(&argparse, options, usage, 0);
     argc = argparse_parse(&argparse, argc, argv);
-    
-    if (num_parallel_mkl_slaves == -1){
+
+    if (num_parallel_mkl_slaves == -1) {
         int max_threads = mkl_get_max_threads();
-        log_info("There are %d cores on machine",max_threads);
-        
-        num_parallel_mkl_slaves =(int) (max_threads * 0.9) ;
-        
-        if (num_parallel_mkl_slaves == 0 )
+        log_info("There are %d cores on machine", max_threads);
+
+        num_parallel_mkl_slaves = (int) (max_threads * 0.9);
+
+        if (num_parallel_mkl_slaves == 0)
             num_parallel_mkl_slaves = 1;
-   
+
     }
-    
-    log_info("Number of MKL Slaves is set to be %d",num_parallel_mkl_slaves);
+
+    log_info("Number of MKL Slaves is set to be %d", num_parallel_mkl_slaves);
     mkl_set_num_threads(num_parallel_mkl_slaves);
-    
+
     check(stage != NULL && (strcmp(stage, "optimize") == 0 || strcmp(stage, "train") == 0 || strcmp(stage, "parse") == 0),
             "Choose one of -s optimize, train, parse");
 
@@ -110,11 +110,7 @@ int main(int argc, char** argv) {
 
     check(modelname != NULL, "Provide model name using -o");
 
-    if (maxnumit <= 0) {
-        log_warn("maxnumit is set to %d", DEFAULT_MAX_NUMIT);
 
-        maxnumit = DEFAULT_MAX_NUMIT;
-    }
 
     if (training == NULL) {
         log_warn("training section string is set to %s", DEFAULT_TRAINING_SECTION_STR);
@@ -128,34 +124,40 @@ int main(int argc, char** argv) {
         dev = strdup(DEFAULT_DEV_SECTION_STR);
     }
 
+    check(epattern != NULL, "Embedding pattern is required for -s optimize,train,parse");
+
+    if (etransform_str == NULL) {
+        log_info("Embedding transformation is set to be QUADRATIC");
+
+        etransform = DEFAULT_EMBEDDING_TRANFORMATION;
+    } else if (strcmp(etransform_str, "LINEAR") == 0) {
+        etransform = LINEAR;
+    } else if (strcmp(etransform_str, "QUADRATIC") == 0) {
+        etransform = QUADRATIC;
+    } else {
+        log_err("Unsupported transformation type for embedding %s", etransform_str);
+    }
+
     if (strcmp(stage, "optimize") == 0 || strcmp(stage, "train") == 0) {
 
-        check(epattern != NULL, "Embedding pattern is required for -s optimize,train");
 
-        if (etransform_str == NULL) {
-            log_info("Embedding transformation is set to be QUADRATIC");
 
-            etransform = DEFAULT_EMBEDDING_TRANFORMATION;
-        } else if (strcmp(etransform_str, "LINEAR") == 0) {
-            etransform = LINEAR;
-        } else if (strcmp(etransform_str, "QUADRATIC") == 0) {
-            etransform = QUADRATIC;
-        } else {
-            log_err("Unsupported transformation type for embedding %s", etransform_str);
+        if (maxnumit <= 0) {
+            log_warn("maxnumit is set to %d", DEFAULT_MAX_NUMIT);
+
+            maxnumit = DEFAULT_MAX_NUMIT;
         }
-
-
     }
 
     if (kernel_str != NULL) {
         if (strcmp(kernel_str, "POLYNOMIAL") == 0) {
 
             log_info("Polynomial kernel will be used with bias %d and degree %d", bias, degree);
-            
+
             kernel = KPOLYNOMIAL;
 
             //kernel_workbench(maxnumit, maxrec, path, training, dev, edimension, kernel, bias, degree);
-            
+
 
         } else {
             log_err("Unsupported kernel type %s. Valid options are LINEAR and POLYNOMIAL.", kernel_str);
@@ -171,8 +173,6 @@ int main(int argc, char** argv) {
 
         sprintf(model_filename, "%s.model", modelname);
 
-        log_info("Model is dumped into %s file", model_filename);
-
         FILE *fp = fopen(model_filename, "w");
 
         if (kernel == KLINEAR) {
@@ -182,21 +182,37 @@ int main(int argc, char** argv) {
             dump_PerceptronModel(fp, edimension, pmodel->embedding_w_best, pmodel->best_numit);
 
             PerceptronModel_free(pmodel);
-        }
-        else if (kernel == KPOLYNOMIAL) {
+        } else if (kernel == KPOLYNOMIAL) {
             KernelPerceptron kpmodel = (KernelPerceptron) model;
 
-            //TODO: DUmp model into a file
-            //TODO: Free memory allocated by the file.
-
-            
+            dump_KernelPerceptronModel(fp, kpmodel);
         }
+
+        log_info("Model is dumped into %s file", model_filename);
 
 
         fclose(fp);
 
 
 
+    } else if (strcmp(stage, "parse") == 0) {
+        char* model_filename = (char*) malloc(sizeof (char) * (strlen(modelname) + 7));
+        check_mem(model_filename);
+
+        sprintf(model_filename, "%s.model", modelname);
+        FILE *fp = fopen(model_filename, "r");
+
+        KernelPerceptron model = load_KernelPerceptronModel(fp);
+        
+        fclose(fp);
+        
+        if (model == NULL){
+            exit(1);
+        }
+
+        log_info("Model loaded from %s successfully", model_filename);
+
+        parseall(model, path, training, edimension);
     } else {
         log_info("Waiting for implementation");
     }

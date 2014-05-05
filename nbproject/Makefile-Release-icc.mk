@@ -37,9 +37,10 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 OBJECTFILES= \
 	${OBJECTDIR}/ai-parse.o \
 	${OBJECTDIR}/argparse.o \
-	${OBJECTDIR}/conllread.o \
+	${OBJECTDIR}/conll.o \
 	${OBJECTDIR}/corpus.o \
 	${OBJECTDIR}/darray.o \
+	${OBJECTDIR}/debug.o \
 	${OBJECTDIR}/dependency.o \
 	${OBJECTDIR}/hashmap.o \
 	${OBJECTDIR}/memman.o \
@@ -51,7 +52,7 @@ OBJECTFILES= \
 
 
 # C Compiler Flags
-CFLAGS=-DNDEBUG -std=gnu99 -DMKL_ILP64 -openmp -I/opt/intel/include -mkl
+CFLAGS=-DNDEBUG -std=gnu99 -DMKL_ILP64 -I/opt/intel/include -mkl -parallel -par-num-threads=2
 
 # CC Compiler Flags
 CCFLAGS=
@@ -72,7 +73,7 @@ LDLIBSOPTIONS=
 
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ai-parse: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ai-parse ${OBJECTFILES} ${LDLIBSOPTIONS} /opt/intel/mkl/lib/libmkl_intel_ilp64.a /opt/intel/mkl/lib/libmkl_core.a /opt/intel/mkl/lib/libmkl_intel_thread.a -lpthread -lm
+	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ai-parse ${OBJECTFILES} ${LDLIBSOPTIONS} /opt/intel/mkl/lib/libmkl_intel_ilp64.a /opt/intel/mkl/lib/libmkl_core.a /opt/intel/mkl/lib/libmkl_intel_thread.a
 
 ${OBJECTDIR}/ai-parse.o: ai-parse.c 
 	${MKDIR} -p ${OBJECTDIR}
@@ -84,10 +85,10 @@ ${OBJECTDIR}/argparse.o: argparse.c
 	${RM} "$@.d"
 	$(COMPILE.c) -O3 -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/argparse.o argparse.c
 
-${OBJECTDIR}/conllread.o: conllread.c 
+${OBJECTDIR}/conll.o: conll.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O3 -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/conllread.o conllread.c
+	$(COMPILE.c) -O3 -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/conll.o conll.c
 
 ${OBJECTDIR}/corpus.o: corpus.c 
 	${MKDIR} -p ${OBJECTDIR}
@@ -98,6 +99,11 @@ ${OBJECTDIR}/darray.o: darray.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.c) -O3 -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/darray.o darray.c
+
+${OBJECTDIR}/debug.o: debug.c 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -O3 -Wall -I/opt/intel/include -I/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/debug.o debug.c
 
 ${OBJECTDIR}/dependency.o: dependency.c 
 	${MKDIR} -p ${OBJECTDIR}

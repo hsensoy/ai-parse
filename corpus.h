@@ -104,7 +104,7 @@ void free_feature_matrix(CoNLLCorpus corpus, int sentence_idx);
 
 void build_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, vector embeddings_w, vector discrete_w);
 void set_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, KernelPerceptron kp);
-void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerceptron kp, bool use_avg_alpha);
+void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerceptron kp, bool use_avg_alpha) ;
 
 void free_FeaturedSentence(CoNLLCorpus corpus, int sentence_idx);
 

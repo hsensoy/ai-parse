@@ -37,9 +37,10 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 OBJECTFILES= \
 	${OBJECTDIR}/ai-parse.o \
 	${OBJECTDIR}/argparse.o \
-	${OBJECTDIR}/conllread.o \
+	${OBJECTDIR}/conll.o \
 	${OBJECTDIR}/corpus.o \
 	${OBJECTDIR}/darray.o \
+	${OBJECTDIR}/debug.o \
 	${OBJECTDIR}/dependency.o \
 	${OBJECTDIR}/hashmap.o \
 	${OBJECTDIR}/memman.o \
@@ -51,7 +52,7 @@ OBJECTFILES= \
 
 
 # C Compiler Flags
-CFLAGS=-DNDEBUG -std=gnu99 -DMKL_ILP64 -I/ai/opt/intel/include -mkl
+CFLAGS=-DNDEBUG -std=gnu99 -DMKL_ILP64 -I/ai/opt/intel/include -mkl -parallel -par-num-threads=8
 
 # CC Compiler Flags
 CCFLAGS=
@@ -84,10 +85,10 @@ ${OBJECTDIR}/argparse.o: argparse.c
 	${RM} "$@.d"
 	$(COMPILE.c) -O3 -Wall -I/ai/opt/intel/include -I/ai/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/argparse.o argparse.c
 
-${OBJECTDIR}/conllread.o: conllread.c 
+${OBJECTDIR}/conll.o: conll.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O3 -Wall -I/ai/opt/intel/include -I/ai/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/conllread.o conllread.c
+	$(COMPILE.c) -O3 -Wall -I/ai/opt/intel/include -I/ai/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/conll.o conll.c
 
 ${OBJECTDIR}/corpus.o: corpus.c 
 	${MKDIR} -p ${OBJECTDIR}
@@ -98,6 +99,11 @@ ${OBJECTDIR}/darray.o: darray.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.c) -O3 -Wall -I/ai/opt/intel/include -I/ai/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/darray.o darray.c
+
+${OBJECTDIR}/debug.o: debug.c 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -O3 -Wall -I/ai/opt/intel/include -I/ai/opt/intel/mkl/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/debug.o debug.c
 
 ${OBJECTDIR}/dependency.o: dependency.c 
 	${MKDIR} -p ${OBJECTDIR}

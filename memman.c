@@ -10,53 +10,47 @@
 #include "debug.h"
 #include "mkl.h"
 
-size_t aligned_size(size_t n){
-    return ((n/32) + 1) * 32;
+size_t aligned_size(size_t n) {
+    return ((n / 32) + 1) * 32;
 }
 
-float* alloc_aligned(size_t n){
+float* alloc_aligned(size_t n) {
     float *buffer;
-	
-	
-	/*
-		int rc = posix_memalign((void**)&buffer, 32, sizeof(float) * n);
-    
-		check(rc == 0, "Buffer allocation error");
-    
-		for (int i = 0 ;i < n;i++)
-			buffer[i] = 0.0;
-	*/
-		 
-	buffer = calloc(n, sizeof(float));
-	check_mem(buffer);
-    
+
+    buffer = calloc(n, sizeof (float));
+    check_mem(buffer);
+
     return buffer;
-    
+
 error:
     exit(1);
 }
 
+void* mkl_64bytes_malloc(size_t bytes) {
+    void *buffer = mkl_malloc(bytes, 64);
 
-void* mkl_64bytes_malloc(size_t bytes){
-    void *buffer = mkl_malloc( bytes , 64);
-    
-    check(buffer != NULL,"Memory allocation error...");
-    
+    check(buffer != NULL, "Memory allocation error...");
+
     return buffer;
 error:
-        mkl_free(buffer);
-        exit(1);    
+    mkl_free(buffer);
+    exit(1);
 }
 
-void* mkl_64bytes_realloc(void* ptr, size_t newbytes){
-    void *buffer = mkl_realloc( ptr, newbytes);
-    
-    check(buffer != NULL,"Memory allocation error...");
-    
+void* mkl_64bytes_realloc(void* ptr, size_t newbytes) {
+    void *buffer;
+    if (ptr == NULL){
+        buffer = mkl_64bytes_malloc(newbytes);
+    }else{
+        buffer = mkl_realloc(ptr, newbytes);
+
+        check(buffer != NULL, "Memory allocation error...");
+    }
+
     return buffer;
 error:
-        mkl_free(buffer);
-        exit(1);    
+    mkl_free(buffer);
+    exit(1);
 }
 
 

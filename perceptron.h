@@ -36,9 +36,20 @@ void update_average_alpha(KernelPerceptron kp);
 
 void train_once_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus, int max_rec);
 
-double test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus, bool exclude_punct);
+/**
+ * 
+ * @param mdl KernelPerceptron model
+ * @param corpus Corpus to be parsed
+ * @param exclude_punct Whether to exclude punctuation head estimation in evaluation.
+ * @param ofp Dump the parsed sentences into a file if ofp != NULL
+ * @return accuracy 
+ */
+double test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus, bool exclude_punct,FILE *ofp);
 
- void mark_best_KernelPerceptronModel(KernelPerceptron kmodel, int numit);
+void mark_best_KernelPerceptronModel(KernelPerceptron kmodel, int numit);
+ 
+void dump_KernelPerceptronModel(FILE *fp, KernelPerceptron kp);
+KernelPerceptron load_KernelPerceptronModel(FILE *fp);
 
 
 

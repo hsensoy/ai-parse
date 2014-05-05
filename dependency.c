@@ -687,10 +687,6 @@ void printfembedding(FeatureVector **mat, size_t n) {
     }
 }
 
-double dsecnd() {
-    return 0.0;
-}
-
 void train_perceptron_once(PerceptronModel mdl, const CoNLLCorpus corpus, int max_rec) {
     long match = 0, total = 0;
     //size_t slen=0;

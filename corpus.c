@@ -13,6 +13,7 @@
 #include "debug.h"
 #include "dependency.h"
 #include "memman.h"
+#include "conll.h"
 
 #include <string.h>
 
@@ -21,6 +22,13 @@
 #endif
 
 Word Root = NULL;
+
+size_t max_num_sv = 0;
+size_t max_narc = 0;
+
+float *C = NULL, *r = NULL, *y = NULL;
+
+
 
 /**
  * Single feature matrix across the parser at a time.
@@ -464,7 +472,7 @@ error:
     exit(1);
 }
 
-float* get_embedding_matrix(CoNLLCorpus corpus, int sentence_idx, MKL_INT *m, MKL_INT *n) {
+float* get_embedding_matrix(CoNLLCorpus corpus, int sentence_idx, size_t *m, size_t *n) {
     FeaturedSentence sentence = (FeaturedSentence) DArray_get(corpus->sentences, sentence_idx);
     int length = sentence->length;
 
@@ -472,9 +480,9 @@ float* get_embedding_matrix(CoNLLCorpus corpus, int sentence_idx, MKL_INT *m, MK
     *n = (sentence->feature_matrix_ref->matrix_data)[0][1]->continous_v->true_n;
 
     debug("Embedding matrix is %d x %d", *m, *n);
-    
-    float *matrix = (float*)mkl_64bytes_malloc((*m) * (*n) * sizeof (float));
-    
+
+    float *matrix = (float*) mkl_64bytes_malloc((*m) * (*n) * sizeof (float));
+
     int offset = 0;
     for (int _from = 0; _from <= length; _from++) {
         for (int _to = 1; _to <= length; _to++) {
@@ -502,10 +510,12 @@ void set_adj_matrix_mkl(CoNLLCorpus corpus, int sentence_idx, const float* y) {
     int length = sentence->length;
 
     int offset = 0;
-    for (int _from = 0; _from <= length; _from++)
+
+    for (int _from = 0; _from <= length; _from++) {
         for (int _to = 1; _to <= length; _to++)
             if (_to != _from)
                 (sentence->adjacency_matrix)[_from][_to] = y[offset++];
+    }
 
     check(offset == (length + 1) * length - length, "Matrix is not of the same size with the embeddings dimension x # of support vectors");
 
@@ -516,8 +526,10 @@ error:
 
 void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerceptron kp, bool use_avg_alpha) {
 
-    MKL_INT num_sv, narc, edim;
+    size_t num_sv, narc, edim;
     float* embedding_matrix;
+
+
 
     num_sv = kp->M;
 
@@ -532,41 +544,72 @@ void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerce
         embedding_matrix = get_embedding_matrix(corpus, sentence_idx, &narc, &edim);
 
         if (kp->kernel == KPOLYNOMIAL) {
-            float *C = (float*) mkl_64bytes_malloc(num_sv * narc * sizeof (float));
-            float *r = (float*) mkl_64bytes_malloc(num_sv * narc * sizeof (float));
-            float *y = (float*) mkl_64bytes_malloc(narc * sizeof (float));
-            
-            for (int i = 0; i < num_sv * narc; i++) {
+            bool narc_changed = false, num_sv_changed = false;
+            if (narc > max_narc) {
+                max_narc = narc + 4;
+                narc_changed = true;
+            }
+
+            if (num_sv > max_num_sv) {
+                max_num_sv = num_sv + 2048;
+                num_sv_changed = true;
+            }
+
+            if (num_sv_changed || narc_changed) {
+                log_info("REALLOC: C(%lu) and r(%lu)", max_num_sv, max_narc);
+                C = (float*) mkl_64bytes_realloc(C, max_num_sv * max_narc * sizeof (float));
+                r = (float*) mkl_64bytes_realloc(r, max_num_sv * max_narc * sizeof (float));
+            }
+
+            if (narc_changed) {
+                log_info("REALLOC: y(%lu)", max_narc);
+                y = (float*) mkl_64bytes_realloc(y, max_narc * sizeof (float));
+            }
+
+
+            #pragma vector nontemporal (C, r)
+            #pragma loop_count min(3000), max(640000000), avg(1000000)
+            #pragma ivdep
+            for (size_t i = 0; i < num_sv * narc; i++) {
                 C[i] = kp->bias;
-                r[i] = 0.;
+                //r[i] = 0.;
             }
 
             //cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, 
             //        narc, num_sv, edim, 1., embedding_matrix, edim, kp->kernel_matrix, num_sv, 1, C,num_sv);
-            
-            
+
+
             debug("Matrix multiplication");
             cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
                     narc, num_sv, edim, 1., embedding_matrix, edim, kp->kernel_matrix, edim, 1, C, num_sv);
-        
+
 
             debug("Power it");
-            vsPowx(num_sv*narc, C, kp->power, r);
+
+            check(num_sv * narc > 0, "num_sv=%lu and narc=%lu is not valid. Check your code", num_sv, narc);
+#pragma loop_count min(3000), max(640000000), avg(1000000)
+#pragma ivdep
+            for (size_t i = 0; i < num_sv * narc; i++)
+                r[i] = pow(C[i], kp->power);
+
+            //vsPowx(num_sv*narc, C, kp->power, r);
 
             debug("Matrix vector mult");
             if (use_avg_alpha)
                 cblas_sgemv(CblasRowMajor, CblasNoTrans, narc, num_sv, 1., r, num_sv, kp->alpha_avg, 1, 0., y, 1);
             else
                 cblas_sgemv(CblasRowMajor, CblasNoTrans, narc, num_sv, 1., r, num_sv, kp->alpha, 1, 0., y, 1);
-            
+
 
             debug("Set adjacency");
             set_adj_matrix_mkl(corpus, sentence_idx, y);
 
-
+            /*
             mkl_free(C);
             mkl_free(r);
             mkl_free(y);
+             */
+
             debug("C,r,y is freed");
 
         } else if (kp->kernel == KLINEAR) {
@@ -576,9 +619,14 @@ void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerce
 
 
         mkl_free(embedding_matrix);
-    } 
+    }
+
+    return;
+error:
+    exit(1);
 }
 
+/*
 void set_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, KernelPerceptron kp) {
 
     FeaturedSentence sentence = (FeaturedSentence) DArray_get(corpus->sentences, sentence_idx);
@@ -656,7 +704,7 @@ void set_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, KernelPerceptron
         mkl_free(x);
     }
 }
-
+ */
 void build_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, vector embeddings_w, vector discrete_w) {
 
     FeaturedSentence sentence = (FeaturedSentence) DArray_get(corpus->sentences, sentence_idx);
@@ -809,11 +857,10 @@ static DArray* find_corpus_files(const char *dir, DArray* sections) {
 
         while ((entry = readdir(dp))) {
             if (endswith(entry->d_name, ".dp")) {
-                char *fullpath = (char*) malloc(sizeof (char) * (strlen(dir) + 4 + strlen(entry->d_name) + 1));
-                check_mem(fullpath);
-                sprintf(fullpath, "%s/%02d/%s", dir, section, entry->d_name);
 
-                DArray_push(array, fullpath);
+                conll_file_t file = create_CoNLLFile(dir, section, entry->d_name);
+
+                DArray_push(array, file);
             }
         }
 
@@ -837,9 +884,9 @@ void read_corpus(CoNLLCorpus corpus, bool build_feat_matrix) {
 
     for (int i = 0; i < DArray_count(files); i++) {
         ssize_t read;
-        char *file = (char*) DArray_get(files, i);
+        conll_file_t file = (conll_file_t) DArray_get(files, i);
 
-        FILE *fp = fopen(file, "r");
+        FILE *fp = fopen(file->fullpath, "r");
         check_mem(fp);
 
         while ((read = getline(&line, &len, fp)) != -1) {
@@ -850,7 +897,7 @@ void read_corpus(CoNLLCorpus corpus, bool build_feat_matrix) {
                 add_word(sent, w);
 
             } else {
-
+                sent->section = file->section;
                 DArray_push(corpus->sentences, sent);
 
                 //debug("One more sentence is added into corpus...");
