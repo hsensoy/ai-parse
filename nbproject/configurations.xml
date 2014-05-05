@@ -231,7 +231,7 @@
             <pElem>/opt/intel/include</pElem>
             <pElem>/opt/intel/mkl/include</pElem>
           </incDir>
-          <commandLine>-DNDEBUG -std=gnu99 -DMKL_ILP64 -I/opt/intel/include -mkl -parallel -guide</commandLine>
+          <commandLine>-DNDEBUG -std=gnu99 -DMKL_ILP64 -I/opt/intel/include -mkl -parallel -par-num-threads=2</commandLine>
           <warningLevel>2</warningLevel>
         </cTool>
         <ccTool>

@@ -45,7 +45,7 @@ Use Linux-Release for Mac OS X platforms
 make CONF=Release-icc-Linux	 
 ```
 
-## Usage
+## Options
 
 Dependency Parsing by ai-lab.
 
@@ -55,23 +55,15 @@ Ensure that you run (or it is already in your .bashrc, .bash_profile,etc. files)
 source $(INTEL_BASE)/bin/iccvars.sh intel64
 ```
 
-It is highly probable that
+It is most likely to be something like
 
 ```
 source /opt/intel/bin/iccvars.sh intel64
 ```
-
-If you wish execution to go parallel
-
-```
-export MKL_NUM_THREADS=<DEGREE OF PARALLELISM> 
-export MKL_DYNAMIC=true
-export OMP_NESTED=true
 ```
 
-```
 $ dist/Release-icc/icc-MacOSX/ai-parse --help
-[INFO] (ai-parse.c:main:60) ai-parse v0.9.2 (Release)
+2014-05-05 14:49:23 [INFO] (ai-parse.c:main:62) ai-parse v0.9.4 (Release)
 Usage: ai-parse [options] [[--] args]
 
     -h, --help                show this help message and exit
@@ -87,16 +79,24 @@ Usage: ai-parse [options] [[--] args]
     -x, --etransform=<str>    Embedding Transformation
     -k, --kernel=<str>        Kernel Type
     -a, --bias=<int>          Polynomial kernel additive term. Default is 1
+    -c, --concurrency=<int>   Parallel MKL Slaves. Default is 90% of all machine cores
     -b, --degree=<str>        Degree of polynomial kernel. Default is 2
+
 ```
 
-**ai-parse** command is a super-command to (defined by `-s` parameter)
+`-s` parameter defines the stage/mode of the parser. There are 3 valid stages/modes
 
-*	_optimize_ (best hyper parameters based on dev set performance) a dependency parsing model using a training set, 
+*	_optimize_ (best hyper parameters based on dev set performance) a dependency parsing model using a training set
+	* _optimize_ option generates a file with `.model` extension and model name (given by `-o` option). This file is used by _parse_ option to load the model.
 *	_train_ a dependency parsing model using a training set with given hyper parameters, and 
 *	_parse_ a given a set of sentences by using  a given dependency parsing model.
+	* _parse_ option generates a file with `.output` extension and model name (given by `-o` option). File is in tab separated CoNLL-like format.
+		* One word per line.
+		* One empty line between sentences.
+		* Each line includes following fields with tab separator
+		 `Word#` `Form` `POSTag` `True Parent#` `Model Parent#` `Section#`	
 
-`-o` parameter specifies a model name. String passed to the option is used as the model file name (`<string>.model`). For _optimize_ and _train_ stages this is the name of the file to be created after training is done, whereas this the model to be used by the parser when stage is _parse_
+`-o` parameter specifies a model name. Refer `-s` option for more details
 
 `-p` parameter refers to any CoNLL root directory. Expected directory structure is 
 
@@ -142,23 +142,49 @@ Refer to `scripts/enrich.py` to create clones of original ConLL directory enrich
 
 `-m` is used to restrict number of training instances to be used for _optimize_ and _train_. Only first `-m` instances will be used from the sections given by `-t` option. This option defined to perform experiments to see the effect of training instances used over development set accuracy.
 
-`-x` is used to define basis function to be used by the parser. Don't use this option today. This defined for future requirements.
+`-x` is used to define basis function to be used by the parser. Don't use this option today. This defined for future requirements. Either `LINEAR` (default) or `QUADRATIC`.
 
-### Two Sample Usage of ai-parse
-Following call runs au-parse for optimising a dependency parser over a corpus in `~/uparse/data/nlp/treebank/treebank-2.0/combined/conll_type_scode` root directory having 25 dimensional word embeddings. For arch scoring a combination of parent, child word embeddings, and distance between them is used (`-e` option). Model will be saved in to `scode_type.model` file once the run is complete.
+`-c` is used to define concurrency to be used in parsing (Used by MKL routines. Intel auto parallelism uses 8-way parallelism on Linux 2-way parallelism on MacOS)
+
+`-k` is used to define kernel function. Either `LINEAR` (default) or `POLYNOMIAL`.
+
+`-a` is the bias parameter for `POLYNOMIAL` kernel.
+
+`-b` is the degree of `POLYNOMIAL` kernel function.
+
+## Sample Runs
+### Polynomial Kernel Perceptron Mode
+#### Model Optimisation
+Following call runs `ai-parse` to train a model called `kernel_limited` (this will create a model file called `kernel_limited.model` by termination) using `POLYNOMIAL` kernel and  executing parser in 16-way parallelism. Training will only use first `10000` sentences in `2-22` sections of corpus.
+
+```
+ai-parse -o kernel_limited -p $CONLL_ROOT -s optimize -e p-1v_p0v_p1v_c-1v_c0v_c1v_tl -l 25 -k POLYNOMIAL -x LINEAR -c 16 -m 10000
+```
+
+#### Parsing
+Following call runs `ai-parse` to apply kernel model in `kernel.model` file to parse `0,23,24` sections of corpus in `$CONLL_ROOT` base directory in 16-way parallelism. 
+
+```
+ai-parse -o kernel -p $CONLL_ROOT -s parse -t 0,23,24 -e p-1v_p0v_p1v_c-1v_c0v_c1v_tl -l 25 -x LINEAR -k POLYNOMIAL -c 16
+```
+
+### Feature Function Mode
+#### Model Optimisation
+
+Following call runs ai-parse for optimising a dependency parser over a corpus in `~/uparse/data/nlp/treebank/treebank-2.0/combined/conll_type_scode` root directory having 25 dimensional word embeddings. For arch scoring a combination of parent, child word embeddings, and distance between them is used (`-e` option). Model will be saved in to `scode_type.model` file once the run is complete.
 
 ```
 $ cat run_type.sh 
 export CONLL_PATH=~/uparse/data/nlp/treebank/treebank-2.0/combined/conll_type_scode
-dist/Release/GNU-MacOSX/ai-parse -s optimize -p $CONLL_PATH -l 25 -e p0v_c0v_tl -o scode_type
+dist/Release/GNU-MacOSX/ai-parse -s optimize -p $CONLL_PATH -l 25 -e p0v_c0v_tl -o scode_type -x QUADRATIC
 ```
 
-Following call runs au-parse for optimising a dependency parser over a corpus in `~/uparse/data/nlp/treebank/treebank-2.0/combined/conll_token_scode` root directory having 50 dimensional word embeddings. For arch scoring a combination of parent, parent left/right contexts, child, child left/right context word embeddings, and distance between them is used (`-e` option). Model will be saved in to `scode_token.model` file once the run is complete.
+Following call runs ai-parse for optimising a dependency parser over a corpus in `~/uparse/data/nlp/treebank/treebank-2.0/combined/conll_token_scode` root directory having 50 dimensional word embeddings. For arch scoring a combination of parent, parent left/right contexts, child, child left/right context word embeddings, and distance between them is used (`-e` option). Model will be saved in to `scode_token.model` file once the run is complete.
 
 ```
 myhost:ai-parse husnusensoy$ cat run_token.sh 
 export CONLL_PATH=~/uparse/data/nlp/treebank/treebank-2.0/combined/conll_token_scode
-dist/Release/GNU-MacOSX/ai-parse -s optimize -p $CONLL_PATH -l 50 -e p-1v_p0v_p1v_c-1v_c0v_c1v_tl -o scode_token
+dist/Release/GNU-MacOSX/ai-parse -s optimize -p $CONLL_PATH -l 50 -e p-1v_p0v_p1v_c-1v_c0v_c1v_tl -o scode_token -x QUADRATIC
 ```
 
 
