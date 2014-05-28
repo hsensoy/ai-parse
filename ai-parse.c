@@ -39,6 +39,8 @@ enum EmbeddingTranformation etransform = QUADRATIC;
 enum Kernel kernel = KLINEAR;
 int num_parallel_mkl_slaves = -1;
 const char *modelname = NULL;
+enum BudgetMethod budget_method = NONE;
+size_t budget_target = 50000;
 
 /*
  * 
@@ -51,6 +53,7 @@ int main(int argc, char** argv) {
     int maxrec = -1;
     int bias = 1;
     int degree = 4;
+    const char *budget_type_str = NULL;
     const char *stage = NULL;
     const char *training = NULL;
     const char *dev = NULL;
@@ -80,7 +83,9 @@ int main(int argc, char** argv) {
         OPT_STRING('k', "kernel", &kernel_str, "Kernel Type", NULL),
         OPT_INTEGER('a', "bias", &bias, "Polynomial kernel additive term. Default is 1", NULL),
         OPT_INTEGER('c', "concurrency", &num_parallel_mkl_slaves, "Parallel MKL Slaves. Default is 90% of all machine cores", NULL),
-        OPT_STRING('b', "degree", &degree, "Degree of polynomial kernel. Default is 2", NULL),
+        OPT_INTEGER('b', "degree", &degree, "Degree of polynomial kernel. Default is 4", NULL),
+        OPT_STRING('u', "budget_type", &budget_type_str, "Budget control methods. NONE|RANDOM", NULL),
+        OPT_INTEGER('g', "budget_size", &budget_target, "Budget Target for budget based perceptron algorithms. Default 50K", NULL),
         OPT_END(),
     };
     struct argparse argparse;
@@ -109,6 +114,21 @@ int main(int argc, char** argv) {
     check(edimension != 0, "Set embedding dimension using -l");
 
     check(modelname != NULL, "Provide model name using -o");
+    
+    if (budget_type_str != NULL){
+        if (strcmp(budget_type_str, "RANDOM") == 0 || strcmp(budget_type_str, "RANDOMIZED")==0){
+            budget_method = RANDOMIZED;
+        }else if (strcmp(budget_type_str,"NONE") == 0 ){
+            budget_method = NONE;
+            
+        }else{
+            log_err("Unknow budget control type %s",budget_type_str );
+            goto error;
+        }
+        
+    }else{
+        budget_method = NONE;
+    }
 
 
 

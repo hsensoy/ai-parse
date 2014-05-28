@@ -348,7 +348,7 @@
             <pElem>/opt/intel/include</pElem>
             <pElem>/opt/intel/mkl/include</pElem>
           </incDir>
-          <commandLine>-std=gnu99 -DMKL_ILP64 -openmp -I/opt/intel/include -mkl -O2 -parallel -vec-report4 -par-report3</commandLine>
+          <commandLine>-std=gnu99 -DMKL_ILP64 -openmp -I/opt/intel/include -mkl -O0 -parallel -vec-report4 -par-report3 -debug -O0</commandLine>
           <warningLevel>2</warningLevel>
         </cTool>
         <ccTool>

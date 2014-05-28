@@ -5,7 +5,15 @@
 #include "dependency.h"
 #include "memman.h"
 
+extern enum BudgetMethod budget_method;
+extern size_t budget_target;
+
+#include <time.h>
+#include <stdlib.h>
+
 KernelPerceptron create_PolynomialKernelPerceptron(int power, float bias) {
+
+    srand(time(NULL));
 
     KernelPerceptron kp = (KernelPerceptron) malloc(sizeof (struct KernelPerceptron));
 
@@ -23,6 +31,7 @@ KernelPerceptron create_PolynomialKernelPerceptron(int power, float bias) {
     kp->kernel = KPOLYNOMIAL;
     kp->bias = bias;
     kp->power = power;
+
 
     return kp;
 
@@ -53,24 +62,48 @@ error:
 }
  */
 
+/**
+ * Allocate and initialize an new alpha_key
+ * 
+ * @param sidx Sentence index
+ * @param from from word index
+ * @param to to word index
+ * 
+ * @return Initialized point to alpha_key allocated
+ */
+alpha_key_t* create_alpha_key(uint32_t sidx, uint16_t from, uint16_t to) {
+    alpha_key_t *key;
+
+    key = (alpha_key_t*) malloc(sizeof (alpha_key_t));
+    check(key != NULL, "Alpha key allocation error");
+
+    memset(key, 0, sizeof (alpha_key_t));
+
+    key->sentence_idx = sidx;
+    key->from = from;
+    key->to = to;
+
+    return key;
+
+error:
+    exit(1);
+}
+
+unsigned get_keylen() {
+    return offsetof(alpha_t, to) /* offset of last key field */
+            + sizeof (uint16_t) /* size of last key field */
+            - offsetof(alpha_t, sentence_idx); /* offset of first key field */
+}
+
 void update_alpha(KernelPerceptron kp, uint32_t sidx, uint16_t from, uint16_t to, struct FeaturedSentence* sent, float inc) {
 
     unsigned keylen;
     alpha_t *a, *dummy = NULL;
     alpha_key_t *a_key = NULL;
 
-    keylen = offsetof(alpha_t, to) /* offset of last key field */
-            + sizeof (uint16_t) /* size of last key field */
-            - offsetof(alpha_t, sentence_idx); /* offset of first key field */
+    keylen = get_keylen();
 
-    a_key = (alpha_key_t*) malloc(sizeof (alpha_key_t));
-    memset(a_key, 0, sizeof (alpha_key_t));
-
-    a_key->from = from;
-    a_key->to = to;
-    a_key->sentence_idx = sidx;
-
-
+    a_key = create_alpha_key(sidx, from, to);
 
     HASH_FIND(hh, kp->arch_to_index_map, &a_key->sentence_idx, keylen, a);
     if (a != NULL) {
@@ -132,6 +165,136 @@ void update_alpha(KernelPerceptron kp, uint32_t sidx, uint16_t from, uint16_t to
     return;
 error:
     exit(1);
+}
+
+size_t delete_hypothesis(KernelPerceptron kp, size_t idx) {
+
+    if (kp->M > 1) {
+
+        unsigned keylen = get_keylen();
+
+        alpha_t *a = NULL;
+        alpha_t *rm_v = NULL, *mv_v = NULL;
+        alpha_key_t *rm_k = NULL, *mv_k = NULL;
+
+
+        for (a = kp->arch_to_index_map; a != NULL && (mv_v == NULL || rm_v == NULL); a = a->hh.next) {
+
+            // You found the one to be moved 
+            if (a->idx == kp->M - 1) {
+
+                mv_v = a;
+                //mv_k = create_alpha_key(a->sentence_idx, a->from,a->to);
+
+            }
+
+            // You found the one to be deleted
+            if (a->idx == idx) {
+
+                rm_v = a;
+
+                //rm_k = create_alpha_key(a->sentence_idx, a->from,a->to);
+
+            }
+
+        }
+
+        check(mv_v != NULL && rm_v != NULL, "Check the code. move_key or rm_key is NULL");
+
+        int alpha_chopped = (int) (kp->alpha)[rm_v->idx];
+
+        if (alpha_chopped != 1 && alpha_chopped != -1)
+            return false;
+
+        (kp->alpha)[rm_v->idx] = (kp->alpha)[mv_v->idx];
+        kp->alpha = (float*) mkl_64bytes_realloc(kp->alpha, ((kp->M) - 1) * sizeof (float));
+
+        (kp->beta)[rm_v->idx] = (kp->beta)[mv_v->idx];
+        kp->beta = (float*) mkl_64bytes_realloc(kp->beta, ((kp->M) - 1) * sizeof (float));
+
+        for (size_t i = 0; i < kp->N; i++) {
+
+            kp->kernel_matrix[ rm_v->idx * kp->N + i ] = kp->kernel_matrix[ mv_v->idx * kp->N + i ];
+
+        }
+
+        kp->kernel_matrix = (float*) mkl_64bytes_realloc(kp->kernel_matrix, ((kp->M - 1) * kp->N) * sizeof (float));
+
+        if (mv_v == rm_v) {
+            HASH_DEL(kp->arch_to_index_map, mv_v);
+        } else {
+
+            HASH_DEL(kp->arch_to_index_map, mv_v);
+            HASH_DEL(kp->arch_to_index_map, rm_v);
+        }
+
+
+        a = (alpha_t*) malloc(sizeof (alpha_t));
+        memset(a, 0, sizeof (alpha_t)); /* zero fill */
+
+        a->from = mv_v->from;
+        a->to = mv_v->to;
+        a->sentence_idx = mv_v->sentence_idx;
+        a->idx = rm_v->idx;
+
+
+        HASH_ADD(hh, kp->arch_to_index_map, sentence_idx, keylen, a);
+        
+        if (mv_v == rm_v) {
+            free(mv_v);
+        } else {
+            free(mv_v);
+            free(rm_v);
+        }
+
+        (kp->M)--;
+
+        return true;
+
+    } else {
+        log_warn("There are only %lu hypothesis vectors left. Do deletion will be done.", kp->M);
+
+        return false;
+    }
+
+error:
+    exit(1);
+}
+
+#define MAX_FAIL_TO_DELETE 5
+
+size_t delete_n_random_hypothesis(KernelPerceptron kp, size_t delete_count) {
+
+    size_t ndel_success = 0;
+
+    if (kp->M > delete_count + 1) {
+
+        for (size_t i = 0; i < delete_count; i++) {
+
+            bool deleted = false;
+            int fail_to_delete = 0;
+
+            while (!deleted && fail_to_delete < MAX_FAIL_TO_DELETE) {
+                size_t r = ((size_t) rand()) % (kp->M);
+
+                bool rc = delete_hypothesis(kp, r);
+
+                if (rc) {
+                    deleted = true;
+                    ndel_success++;
+                } else {
+                    fail_to_delete++;
+                }
+            }
+
+        }
+
+    } else {
+        log_warn("There are only %lu hypothesis vectors left. %lu vectors are asked for deletion.Do deletion will be done.", kp->M, delete_count);
+    }
+
+    return ndel_success;
+
 }
 
 void update_average_alpha(KernelPerceptron kp) {
@@ -198,6 +361,17 @@ void train_once_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus co
             }
         } else {
             log_info("Sentence %d (section %d) of length %d (Perfect parse)", si, sent->section, sent->length);
+        }
+
+        size_t nsuccess;
+        if (budget_method == RANDOMIZED) {
+            if (mdl->M > budget_target) {
+                size_t nbefore = mdl->M;
+                size_t nasked = nbefore - budget_target;
+                nsuccess = delete_n_random_hypothesis(mdl, nasked);
+
+                log_info("%lu vectors deleted (%lu asked). Current hypothesis set size reduced from %lu to %lu", nsuccess, nasked, nbefore, mdl->M);
+            }
         }
 
         mdl->c++;
@@ -349,8 +523,8 @@ KernelPerceptron load_KernelPerceptronModel(FILE *fp) {
     enum Kernel type;
 
     int n = fscanf(fp, "kernel=%d\n", &type);
-    
-    debug("Kernel type is %d",type);
+
+    debug("Kernel type is %d", type);
 
     check(n == 1, "No kernel type found in file");
 
@@ -361,22 +535,22 @@ KernelPerceptron load_KernelPerceptronModel(FILE *fp) {
 
     n = fscanf(fp, "power=%d\n", &power);
     check(n == 1 && power > 0, "No power found for polynomial model");
-    
-    debug("Power is %d",power);
+
+    debug("Power is %d", power);
     n = fscanf(fp, "bias=%f\n", &bias);
     check(n == 1, "No bias found for polynomial model");
-    debug("Bias is %f",bias);
+    debug("Bias is %f", bias);
 
     KernelPerceptron model = create_PolynomialKernelPerceptron(power, bias);
 
     n = fscanf(fp, "nsv=%lu\nedim=%lu\nnumit=%d\nc=%d\n", &(model->M), &(model->N), &(model->best_numit), &(model->c));
     check(n == 4, "Num s.v. or embedding dimension or numit or c is missing in model file");
 
-    debug("Number of Support Vectors are %lu",model->M);
-    debug("Embedding dimensiob is %lu",model->N);
-    debug("Number of Iterations are %d",model->best_numit);
-    debug("C is %d",model->c);
-    
+    debug("Number of Support Vectors are %lu", model->M);
+    debug("Embedding dimensiob is %lu", model->N);
+    debug("Number of Iterations are %d", model->best_numit);
+    debug("C is %d", model->c);
+
     model->alpha_avg = (float*) mkl_64bytes_malloc(model->M * sizeof (float));
     model->alpha = (float*) mkl_64bytes_malloc(model->M * sizeof (float));
     size_t real_idx;
