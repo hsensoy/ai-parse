@@ -31,6 +31,8 @@ KernelPerceptron create_PolynomialKernelPerceptron(int power, float bias) {
     kp->kernel = KPOLYNOMIAL;
     kp->bias = bias;
     kp->power = power;
+    
+    log_info("Polynomial kernel of degree %d with bias %f is created",kp->power,kp->bias);
 
 
     return kp;

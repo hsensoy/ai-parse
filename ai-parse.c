@@ -41,6 +41,8 @@ int num_parallel_mkl_slaves = -1;
 const char *modelname = NULL;
 enum BudgetMethod budget_method = NONE;
 size_t budget_target = 50000;
+int polynomial_degree = 4;
+float bias = 1.0;
 
 /*
  * 
@@ -51,8 +53,7 @@ int main(int argc, char** argv) {
     int maxnumit = 0;
     int edimension = 0;
     int maxrec = -1;
-    int bias = 1;
-    int degree = 4;
+    
     const char *budget_type_str = NULL;
     const char *stage = NULL;
     const char *training = NULL;
@@ -83,7 +84,7 @@ int main(int argc, char** argv) {
         OPT_STRING('k', "kernel", &kernel_str, "Kernel Type", NULL),
         OPT_INTEGER('a', "bias", &bias, "Polynomial kernel additive term. Default is 1", NULL),
         OPT_INTEGER('c', "concurrency", &num_parallel_mkl_slaves, "Parallel MKL Slaves. Default is 90% of all machine cores", NULL),
-        OPT_INTEGER('b', "degree", &degree, "Degree of polynomial kernel. Default is 4", NULL),
+        OPT_INTEGER('b', "degree", &polynomial_degree, "Degree of polynomial kernel. Default is 4", NULL),
         OPT_STRING('u', "budget_type", &budget_type_str, "Budget control methods. NONE|RANDOM", NULL),
         OPT_INTEGER('g', "budget_size", &budget_target, "Budget Target for budget based perceptron algorithms. Default 50K", NULL),
         OPT_END(),
@@ -122,7 +123,7 @@ int main(int argc, char** argv) {
             budget_method = NONE;
             
         }else{
-            log_err("Unknow budget control type %s",budget_type_str );
+            log_err("Unknown budget control type %s",budget_type_str );
             goto error;
         }
         
