@@ -24,6 +24,16 @@ extern "C" {
 #ifdef	__cplusplus
 }
 #endif
+ 
+/**
+ * 
+ * NONE: No budgeting at all
+ * RANDOMIZED: Choose one randomly out of hypothesis vector with alpha value equal to 1.
+ */
+enum BudgetMethod{
+    NONE,
+    RANDOMIZED
+};
 
 
 

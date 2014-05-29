@@ -26,6 +26,8 @@ extern const char *epattern;
 extern enum EmbeddingTranformation etransform;
 extern enum Kernel kernel;
 extern const char *modelname;
+extern int polynomial_degree;
+extern float bias;
 
 void* optimize(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension) {
     DArray *train_sections = parse_range(train_sections_str);
@@ -58,7 +60,7 @@ void* optimize(int max_numit, int max_rec, const char* path, const char* train_s
     if (kernel == KLINEAR)
         model = PerceptronModel_create(train, NULL);
     else
-        kmodel = create_PolynomialKernelPerceptron(4, 1.);
+        kmodel = create_PolynomialKernelPerceptron(polynomial_degree, bias);
 
 
     int numit;
