@@ -39,6 +39,7 @@ enum BudgetMethod{
 
 
 KernelPerceptron create_PolynomialKernelPerceptron(int power, float bias);
+KernelPerceptron create_RBFKernelPerceptron(float lambda) ;
 
 void update_alpha(KernelPerceptron kp, uint32_t sidx, uint16_t from, uint16_t to,  FeaturedSentence sent, float inc);
 

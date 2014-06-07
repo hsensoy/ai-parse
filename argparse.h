@@ -46,6 +46,7 @@ enum argparse_option_type {
     ARGPARSE_OPT_BIT,
     /* options with arguments (optional or required) */
     ARGPARSE_OPT_INTEGER,
+    ARGPARSE_OPT_FLOAT,
     ARGPARSE_OPT_STRING,
 };
 

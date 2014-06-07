@@ -40,6 +40,7 @@ FeatureMatrix feature_matrix_singleton = NULL;
  */
 extern const char *epattern;
 extern enum EmbeddingTranformation etransform;
+extern float rbf_lambda;
 
 
 DArray* embedding_pattern_parts = NULL;
@@ -542,31 +543,30 @@ void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerce
 
     if (num_sv > 0) {
         embedding_matrix = get_embedding_matrix(corpus, sentence_idx, &narc, &edim);
+        
+        bool narc_changed = false, num_sv_changed = false;
+        if (narc > max_narc) {
+            max_narc = narc + 4;
+            narc_changed = true;
+        }
+
+        if (num_sv > max_num_sv) {
+            max_num_sv = num_sv + 2048;
+            num_sv_changed = true;
+        }
+
+        if (num_sv_changed || narc_changed) {
+            log_info("REALLOC: C(%lu) and r(%lu)", max_num_sv, max_narc);
+            C = (float*) mkl_64bytes_realloc(C, max_num_sv * max_narc * sizeof (float));
+            r = (float*) mkl_64bytes_realloc(r, max_num_sv * max_narc * sizeof (float));
+        }
+
+        if (narc_changed) {
+            log_info("REALLOC: y(%lu)", max_narc);
+            y = (float*) mkl_64bytes_realloc(y, max_narc * sizeof (float));
+        }
 
         if (kp->kernel == KPOLYNOMIAL) {
-            bool narc_changed = false, num_sv_changed = false;
-            if (narc > max_narc) {
-                max_narc = narc + 4;
-                narc_changed = true;
-            }
-
-            if (num_sv > max_num_sv) {
-                max_num_sv = num_sv + 2048;
-                num_sv_changed = true;
-            }
-
-            if (num_sv_changed || narc_changed) {
-                log_info("REALLOC: C(%lu) and r(%lu)", max_num_sv, max_narc);
-                C = (float*) mkl_64bytes_realloc(C, max_num_sv * max_narc * sizeof (float));
-                r = (float*) mkl_64bytes_realloc(r, max_num_sv * max_narc * sizeof (float));
-            }
-
-            if (narc_changed) {
-                log_info("REALLOC: y(%lu)", max_narc);
-                y = (float*) mkl_64bytes_realloc(y, max_narc * sizeof (float));
-            }
-
-
             #pragma vector nontemporal (C, r)
             #pragma loop_count min(3000), max(640000000), avg(1000000)
             #pragma ivdep
@@ -600,22 +600,41 @@ void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerce
             else
                 cblas_sgemv(CblasRowMajor, CblasNoTrans, narc, num_sv, 1., r, num_sv, kp->alpha, 1, 0., y, 1);
 
+        } else if (kp->kernel == KRBF){
+            
+            float *delta = (float*) mkl_64bytes_malloc(edim * sizeof (float));
+ 
+            for (size_t i = 0; i < narc; i++) {
+                
+                float *varc = embedding_matrix + i * edim;
+                
+                
+                y[i] = 0.0;
+                for (size_t isv = 0 ;isv < num_sv;isv++){
+                    
+                    float *sv = kp->kernel_matrix + isv * edim;
+                    
+                    
+                    
+                    vsSub(edim,sv,varc,delta);
+                        
+                    if (use_avg_alpha)
+                        y[i] += kp->alpha_avg[isv] * exp(-kp->rbf_lambda * pow(cblas_snrm2(edim, delta, 1),2) );
+                    else
+                        y[i] += kp->alpha[isv] * exp(-kp->rbf_lambda * pow(cblas_snrm2(edim, delta, 1),2) );
+                }
+            }
+            
+            mkl_free(delta);
 
-            debug("Set adjacency");
-            set_adj_matrix_mkl(corpus, sentence_idx, y);
-
-            /*
-            mkl_free(C);
-            mkl_free(r);
-            mkl_free(y);
-             */
-
-            debug("C,r,y is freed");
-
-        } else if (kp->kernel == KLINEAR) {
+        } 
+        else if (kp->kernel == KLINEAR) {
             log_err("Linear kernel is not implemented yet");
             exit(1);
         }
+        
+        debug("Set adjacency");
+        set_adj_matrix_mkl(corpus, sentence_idx, y);
 
 
         mkl_free(embedding_matrix);
