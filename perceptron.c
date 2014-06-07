@@ -43,6 +43,37 @@ error:
 
 }
 
+KernelPerceptron create_RBFKernelPerceptron(float lambda) {
+
+    srand(time(NULL));
+
+    KernelPerceptron kp = (KernelPerceptron) malloc(sizeof (struct KernelPerceptron));
+
+    check(kp != NULL, "KernelPerceptron allocation error");
+
+    kp->M = 0;
+    kp->alpha = NULL;
+    kp->beta = NULL;
+    kp->alpha_avg = NULL;
+    kp->best_alpha_avg = NULL;
+    kp->best_kernel_matrix = NULL;
+    kp->c = 1;
+    kp->kernel_matrix = NULL;
+    kp->arch_to_index_map = NULL;
+    kp->kernel = KRBF;
+    kp->rbf_lambda = lambda;
+    
+    log_info("RBF kernel with lambda %f is created",kp->rbf_lambda);
+
+
+    return kp;
+
+
+error:
+    exit(1);
+
+}
+
 /*
 alpha_t* create_alpha_idx(int sentence_idx, int from, int to, int length) {
 

@@ -14,7 +14,7 @@
 #include "mkl.h"
 #include <string.h>
 
-#define VERSION "v0.9.4"
+#define VERSION "v0.9.6"
 
 
 #define DEFAULT_MAX_NUMIT 50
@@ -35,14 +35,15 @@ static const char *const usage[] = {
  * 
  */
 const char *epattern = NULL;
-enum EmbeddingTranformation etransform = QUADRATIC;
-enum Kernel kernel = KLINEAR;
+enum EmbeddingTranformation etransform = DEFAULT_EMBEDDING_TRANFORMATION;
+enum Kernel kernel = DEFAULT_KERNEL;
 int num_parallel_mkl_slaves = -1;
 const char *modelname = NULL;
 enum BudgetMethod budget_method = NONE;
 size_t budget_target = 50000;
 int polynomial_degree = 4;
 float bias = 1.0;
+float rbf_lambda = 0.025;
 
 /*
  * 
@@ -53,7 +54,7 @@ int main(int argc, char** argv) {
     int maxnumit = 0;
     int edimension = 0;
     int maxrec = -1;
-    
+
     const char *budget_type_str = NULL;
     const char *stage = NULL;
     const char *training = NULL;
@@ -85,6 +86,7 @@ int main(int argc, char** argv) {
         OPT_INTEGER('a', "bias", &bias, "Polynomial kernel additive term. Default is 1", NULL),
         OPT_INTEGER('c', "concurrency", &num_parallel_mkl_slaves, "Parallel MKL Slaves. Default is 90% of all machine cores", NULL),
         OPT_INTEGER('b', "degree", &polynomial_degree, "Degree of polynomial kernel. Default is 4", NULL),
+        OPT_STRING('z', "lambda", &rbf_lambda, "Lambda multiplier for RBF Kernel.Default value is 0.025"),
         OPT_STRING('u', "budget_type", &budget_type_str, "Budget control methods. NONE|RANDOM", NULL),
         OPT_INTEGER('g', "budget_size", &budget_target, "Budget Target for budget based perceptron algorithms. Default 50K", NULL),
         OPT_END(),
@@ -115,19 +117,19 @@ int main(int argc, char** argv) {
     check(edimension != 0, "Set embedding dimension using -l");
 
     check(modelname != NULL, "Provide model name using -o");
-    
-    if (budget_type_str != NULL){
-        if (strcmp(budget_type_str, "RANDOM") == 0 || strcmp(budget_type_str, "RANDOMIZED")==0){
+
+    if (budget_type_str != NULL) {
+        if (strcmp(budget_type_str, "RANDOM") == 0 || strcmp(budget_type_str, "RANDOMIZED") == 0) {
             budget_method = RANDOMIZED;
-        }else if (strcmp(budget_type_str,"NONE") == 0 ){
+        } else if (strcmp(budget_type_str, "NONE") == 0) {
             budget_method = NONE;
-            
-        }else{
-            log_err("Unknown budget control type %s",budget_type_str );
+
+        } else {
+            log_err("Unknown budget control type %s", budget_type_str);
             goto error;
         }
-        
-    }else{
+
+    } else {
         budget_method = NONE;
     }
 
@@ -173,15 +175,19 @@ int main(int argc, char** argv) {
     if (kernel_str != NULL) {
         if (strcmp(kernel_str, "POLYNOMIAL") == 0) {
 
-            log_info("Polynomial kernel will be used with bias %d and degree %d", bias, degree);
+            log_info("Polynomial kernel will be used with bias %f and degree %d", bias, polynomial_degree);
 
             kernel = KPOLYNOMIAL;
+        }            //kernel_workbench(maxnumit, maxrec, path, training, dev, edimension, kernel, bias, degree);
+        else if (strcmp(kernel_str, "GAUSSIAN") == 0 || strcmp(kernel_str, "RBF") == 0) {
 
-            //kernel_workbench(maxnumit, maxrec, path, training, dev, edimension, kernel, bias, degree);
+            log_info("RBF/GAUSSIAN kernel will be used with lambda %f ", rbf_lambda);
+
+            kernel = KRBF;
 
 
         } else {
-            log_err("Unsupported kernel type %s. Valid options are LINEAR and POLYNOMIAL.", kernel_str);
+            log_err("Unsupported kernel type %s. Valid options are LINEAR, POLYNOMIAL, and RBF/GAUSSIAN", kernel_str);
             goto error;
         }
     }
@@ -203,7 +209,7 @@ int main(int argc, char** argv) {
             dump_PerceptronModel(fp, edimension, pmodel->embedding_w_best, pmodel->best_numit);
 
             PerceptronModel_free(pmodel);
-        } else if (kernel == KPOLYNOMIAL) {
+        } else if (kernel == KPOLYNOMIAL || kernel == KRBF) {
             KernelPerceptron kpmodel = (KernelPerceptron) model;
 
             dump_KernelPerceptronModel(fp, kpmodel);
@@ -222,14 +228,14 @@ int main(int argc, char** argv) {
 
         sprintf(model_filename, "%s.model", modelname);
         FILE *fp = fopen(model_filename, "r");
-        
-        check(fp != NULL, "%s could not be opened",model_filename);
+
+        check(fp != NULL, "%s could not be opened", model_filename);
 
         KernelPerceptron model = load_KernelPerceptronModel(fp);
-        
+
         fclose(fp);
-        
-        if (model == NULL){
+
+        if (model == NULL) {
             exit(1);
         }
 

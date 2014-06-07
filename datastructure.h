@@ -83,12 +83,14 @@ typedef struct alpha{
 
 enum Kernel{
     KLINEAR,
-    KPOLYNOMIAL 
+    KPOLYNOMIAL,
+    KRBF
 };
 
 
 struct KernelPerceptron{
     float bias;
+    float rbf_lambda;
     int power;
     
     size_t M;
