@@ -78,6 +78,12 @@ DArray* get_embedding_pattern_parts() {
                 } else if (strcmp(pattern, "l") == 0) { // raw length
                     ep->node = 'l';
                     ep->subnode = 'r';
+                } else if (strcmp(pattern, "lbf") == 0) { // Left Boundary Flag
+                    ep->node = 'b';
+                    ep->subnode = 'l';
+                } else if (strcmp(pattern, "rbf") == 0) { // Right Boundary Flag
+                    ep->node = 'b';
+                    ep->subnode = 'r';
                 } else {
 
                     int n = sscanf(pattern, "%c%dv", &(ep->node), &(ep->offset));
@@ -168,10 +174,12 @@ CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embed
 
         if (pattern->node == 'p' || pattern->node == 'c')
             embedding_concat_length += embedding_dimension;
-        else if (pattern->subnode == 'r' || pattern->subnode == 'n')
+        else if (pattern->node == 'l' && (pattern->subnode == 'r' || pattern->subnode == 'n'))
             embedding_concat_length += 1;
-        else if (pattern->subnode == 't')
+        else if (pattern->node == 'l' && pattern->subnode == 't')
             embedding_concat_length += 6;
+        else if (pattern->node == 'b')
+            embedding_concat_length += 2;
     }
 
     // Be optimistic about LINEAR transformation
@@ -381,6 +389,38 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
 
             }
 
+        }else if (pattern->node == 'b') {
+            if (pattern->subnode == 'l') {
+                vector boundary_v = vector_create(2);
+                boundary_v->data[0] = 0;
+                boundary_v->data[1] = 0;
+                
+                if (from == 1)
+                    boundary_v->data[0] = 1;
+                
+                if (to == 1)
+                    boundary_v->data[1] =1;
+
+
+                bigvector = vconcat(bigvector, boundary_v);
+
+                vector_free(boundary_v);
+            } else if (pattern->subnode == 'r') {
+                vector boundary_v = vector_create(2);
+                boundary_v->data[0] = 0;
+                boundary_v->data[1] = 0;
+                
+                if (from == sent->length)
+                    boundary_v->data[0] = 1;
+                
+                if (to == sent->length)
+                    boundary_v->data[1] =1;
+
+
+                bigvector = vconcat(bigvector, boundary_v);
+
+                vector_free(boundary_v);
+            }
         }
     }
 
@@ -543,7 +583,7 @@ void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerce
 
     if (num_sv > 0) {
         embedding_matrix = get_embedding_matrix(corpus, sentence_idx, &narc, &edim);
-        
+
         bool narc_changed = false, num_sv_changed = false;
         if (narc > max_narc) {
             max_narc = narc + 4;
@@ -567,9 +607,9 @@ void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerce
         }
 
         if (kp->kernel == KPOLYNOMIAL) {
-            #pragma vector nontemporal (C, r)
-            #pragma loop_count min(3000), max(640000000), avg(1000000)
-            #pragma ivdep
+#pragma vector nontemporal (C, r)
+#pragma loop_count min(3000), max(640000000), avg(1000000)
+#pragma ivdep
             for (size_t i = 0; i < num_sv * narc; i++) {
                 C[i] = kp->bias;
                 //r[i] = 0.;
@@ -600,39 +640,39 @@ void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerce
             else
                 cblas_sgemv(CblasRowMajor, CblasNoTrans, narc, num_sv, 1., r, num_sv, kp->alpha, 1, 0., y, 1);
 
-        } else if (kp->kernel == KRBF){
-            
+        } else if (kp->kernel == KRBF) {
+
             float *delta = (float*) mkl_64bytes_malloc(edim * sizeof (float));
- 
+
             for (size_t i = 0; i < narc; i++) {
-                
+
                 float *varc = embedding_matrix + i * edim;
-                
-                
+
+
                 y[i] = 0.0;
-                for (size_t isv = 0 ;isv < num_sv;isv++){
-                    
+                for (size_t isv = 0; isv < num_sv; isv++) {
+
                     float *sv = kp->kernel_matrix + isv * edim;
-                    
-                    
-                    
-                    vsSub(edim,sv,varc,delta);
-                        
+
+
+
+                    vsSub(edim, sv, varc, delta);
+
                     if (use_avg_alpha)
-                        y[i] += kp->alpha_avg[isv] * exp(-kp->rbf_lambda * pow(cblas_snrm2(edim, delta, 1),2) );
+                        y[i] += kp->alpha_avg[isv] * exp(-kp->rbf_lambda * pow(cblas_snrm2(edim, delta, 1), 2));
                     else
-                        y[i] += kp->alpha[isv] * exp(-kp->rbf_lambda * pow(cblas_snrm2(edim, delta, 1),2) );
+                        y[i] += kp->alpha[isv] * exp(-kp->rbf_lambda * pow(cblas_snrm2(edim, delta, 1), 2));
                 }
             }
-            
+
             mkl_free(delta);
 
-        } 
+        }
         else if (kp->kernel == KLINEAR) {
             log_err("Linear kernel is not implemented yet");
             exit(1);
         }
-        
+
         debug("Set adjacency");
         set_adj_matrix_mkl(corpus, sentence_idx, y);
 
