@@ -11,6 +11,7 @@
 #include "datastructure.h"
 #include "debug.h"
 #include "corpus.h"
+#include "dependency.h"
 #include <stdint.h>
 
 
@@ -55,7 +56,7 @@ void train_once_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus co
  * @param ofp Dump the parsed sentences into a file if ofp != NULL
  * @return accuracy 
  */
-double test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus, bool exclude_punct,FILE *ofp);
+ParserTestMetric test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus, bool exclude_punct,FILE *ofp);
 
 void mark_best_KernelPerceptronModel(KernelPerceptron kmodel, int numit);
  

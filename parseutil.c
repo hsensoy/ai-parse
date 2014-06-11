@@ -64,8 +64,8 @@ void* optimize(int max_numit, int max_rec, const char* path, const char* train_s
         kmodel = create_PolynomialKernelPerceptron(polynomial_degree, bias);
     else
         kmodel = create_RBFKernelPerceptron(rbf_lambda);
-                
-    
+
+
     int numit;
 
     int best_iter = -1;
@@ -82,21 +82,23 @@ void* optimize(int max_numit, int max_rec, const char* path, const char* train_s
 
         log_info("END-TRAIN: Iteration %d", numit);
 
-        double dev_acc;
+        ParserTestMetric dev_metric;
         log_info("BEGIN-TEST: Iteration %d", numit);
         if (kernel == KLINEAR)
-            dev_acc = test_perceptron_parser(model, dev, true, true);
+            dev_metric = test_perceptron_parser(model, dev, true, true);
         else
-            dev_acc = test_KernelPerceptronModel(kmodel, dev, true,NULL);
+            dev_metric = test_KernelPerceptronModel(kmodel, dev, true, NULL);
         log_info("END-TEST: Iteration %d", numit);
-        
-        double train_acc = 0.0;
 
+        log_info("\nnumit=%d", numit);
 
-        log_info("\n\tnumit=%d accuracy(dev)=%lf accuracy(train)=%lf\n", numit, dev_acc, train_acc);
+        printParserTestMetric(dev_metric);
 
+        double dev_acc = (dev_metric->without_punc->true_prediction * 1.) / dev_metric->without_punc->total_prediction;
         numit_dev_avg[numit - 1] = dev_acc;
-        numit_train_avg[numit - 1] = train_acc;
+        numit_train_avg[numit - 1] = 0.0;
+
+        freeParserTestMetric(dev_metric);
 
         if (best_score < dev_acc) {
             if (best_score + MIN_DELTA > dev_acc)
@@ -137,7 +139,7 @@ error:
 
 }
 
-void parseall(const KernelPerceptron model, const char* path, const char* test_sections_str, int embedding_dimension){
+void parseall(const KernelPerceptron model, const char* path, const char* test_sections_str, int embedding_dimension) {
     DArray *test_sections = parse_range(test_sections_str);
 
     signal(SIGINT, intHandler);
@@ -154,21 +156,22 @@ void parseall(const KernelPerceptron model, const char* path, const char* test_s
     int best_iter = -1;
     float best_score = 0.0;
 
-   char* output_filename = (char*) malloc(sizeof (char) * (strlen(modelname) + 8));
-   check_mem(output_filename);
+    char* output_filename = (char*) malloc(sizeof (char) * (strlen(modelname) + 8));
+    check_mem(output_filename);
 
     sprintf(output_filename, "%s.output", modelname);
-    FILE *fp = fopen(output_filename,"w");
-    double test_accuracy = test_KernelPerceptronModel(model, test, true, fp);
+    FILE *fp = fopen(output_filename, "w");
+    ParserTestMetric test_metric = test_KernelPerceptronModel(model, test, true, fp);
     fclose(fp);
 
-    log_info("Accuracy(test): %f", test_accuracy);
+    printParserTestMetric(test_metric);
+    freeParserTestMetric(test_metric);
 
     return;
 error:
     log_err("Memory allocation error");
 
     exit(1);
-    
-    
+
+
 }

@@ -82,6 +82,35 @@ struct PerceptronModel {
 
 typedef struct PerceptronModel* PerceptronModel;
 
+struct HeadPredictionMetric{
+    int true_prediction;
+    int total_prediction;
+};
+
+typedef struct HeadPredictionMetric* HeadPredictionMetric;
+
+/**
+ *      all: Number of head predictions made correctly
+ *      without_punc: Number of head predictions made correctly (punctuation heads are excluded)
+ *      true_root_predicted: Number of roots predicted to be true
+ *      total_sentence: Total number of sentence.
+ *      complete_sentence: +1 if all head predictions are correct for the sentence.
+ *      complete_sentence_without_punc: +1 if all head predictions are correnct for non-punctuation words in a sentence.
+ *      
+ */
+struct ParserTestMetric{
+    HeadPredictionMetric all;
+    HeadPredictionMetric without_punc;
+    
+    int true_root_predicted;
+    
+    int total_sentence;
+    int complete_sentence;
+    int complete_sentence_without_punc;
+};
+
+typedef struct ParserTestMetric* ParserTestMetric;
+
 
 
 /**
@@ -99,7 +128,12 @@ void PerceptronModel_free(PerceptronModel model);
 
 void train_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, int numit, int max_rec);
 void train_perceptron_once(PerceptronModel mdl, const CoNLLCorpus corpus, int max_rec);
-double test_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, bool exclude_punct, bool use_temp);
+
+ParserTestMetric create_ParserTestMetric();
+ParserTestMetric test_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, bool exclude_punct, bool use_temp);
+void printParserTestMetric(ParserTestMetric metric);
+
+void freeParserTestMetric(ParserTestMetric ptm);
 
 void fill_features(Hashmap *featuremap, DArray *farr, int from, int to, FeaturedSentence sentence);
 void parse_and_dump(PerceptronModel mdl, FILE *fp, CoNLLCorpus corpus);

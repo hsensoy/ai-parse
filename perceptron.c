@@ -31,8 +31,8 @@ KernelPerceptron create_PolynomialKernelPerceptron(int power, float bias) {
     kp->kernel = KPOLYNOMIAL;
     kp->bias = bias;
     kp->power = power;
-    
-    log_info("Polynomial kernel of degree %d with bias %f is created",kp->power,kp->bias);
+
+    log_info("Polynomial kernel of degree %d with bias %f is created", kp->power, kp->bias);
 
 
     return kp;
@@ -62,8 +62,8 @@ KernelPerceptron create_RBFKernelPerceptron(float lambda) {
     kp->arch_to_index_map = NULL;
     kp->kernel = KRBF;
     kp->rbf_lambda = lambda;
-    
-    log_info("RBF kernel with lambda %f is created",kp->rbf_lambda);
+
+    log_info("RBF kernel with lambda %f is created", kp->rbf_lambda);
 
 
     return kp;
@@ -272,7 +272,7 @@ size_t delete_hypothesis(KernelPerceptron kp, size_t idx) {
 
 
         HASH_ADD(hh, kp->arch_to_index_map, sentence_idx, keylen, a);
-        
+
         if (mv_v == rm_v) {
             free(mv_v);
         } else {
@@ -435,8 +435,9 @@ void train_once_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus co
     return;
 }
 
-double test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus, bool exclude_punct, FILE *ofp) {
-    int match = 0, total = 0;
+ParserTestMetric test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus, bool exclude_punct, FILE *ofp) {
+    ParserTestMetric metric = create_ParserTestMetric();
+
     for (int si = 0; si < DArray_count(corpus->sentences); si++) {
         FeaturedSentence sent = DArray_get(corpus->sentences, si);
 
@@ -451,7 +452,7 @@ double test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus
         debug("Now parsing sentence %d", si);
         int *model = parse(sent);
 
-
+        (metric->total_sentence)++;
         debug("Now comparing actual arcs with model generated arcs for sentence %d (Last sentence is %d)", si, sent->length);
         for (int j = 0; j < sent->length; j++) {
             Word w = (Word) DArray_get(sent->words, j);
@@ -462,22 +463,38 @@ double test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus
                 fprintf(ofp, "%d\t%s\t%s\t%d\t%d\t%u\n", j + 1, w->form, postag, p, model[j + 1], sent->section);
             }
 
+            if (p == 0 && model[j + 1] == 0)
+                (metric->true_root_predicted)++;
+
             debug("\tTrue parent of word %d (with %s:%s) is %d whereas estimated parent is %d", j, postag, w->form, p, model[j + 1]);
 
-            if (exclude_punct) {
-                if (strcmp(postag, ",") != 0 && strcmp(postag, ":") != 0 && strcmp(postag, ".") != 0 && strcmp(postag, "``") != 0 && strcmp(postag, "''") != 0) {
+            int pmatch_nopunc = 0, ptotal_nopunc = 0,pmatch = 0;
+            if (strcmp(postag, ",") != 0 && strcmp(postag, ":") != 0 && strcmp(postag, ".") != 0 && strcmp(postag, "``") != 0 && strcmp(postag, "''") != 0) {
 
-                    if (p == model[j + 1])
-                        match++;
-
-                    total++;
+                if (p == model[j + 1]){
+                    (metric->without_punc->true_prediction)++;
+                    pmatch_nopunc++;
                 }
-            } else {
-                if (p == model[j + 1])
-                    match++;
+                
+                ptotal_nopunc++;
 
-                total++;
+                (metric->without_punc->total_prediction)++;
             }
+            
+            if (pmatch_nopunc == ptotal_nopunc && pmatch_nopunc !=0){
+                (metric->complete_sentence_without_punc)++;
+            }
+
+
+            (metric->all->total_prediction)++;
+
+            if (p == model[j + 1]){
+                pmatch++;
+                (metric->all->true_prediction)++;
+            }
+            
+            if (pmatch == sent->length && pmatch!=0)
+                (metric->complete_sentence)++;
         }
 
         if (ofp != NULL) {
@@ -494,7 +511,7 @@ double test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus
 
     }
 
-    return (match * 1.) / total;
+    return metric;
 }
 
 void mark_best_KernelPerceptronModel(KernelPerceptron kmodel, int numit) {
