@@ -65,5 +65,6 @@ KernelPerceptron load_KernelPerceptronModel(FILE *fp);
 
 
 
+
 #endif	/* PERCEPTRON_H */
 

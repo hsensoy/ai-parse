@@ -66,7 +66,8 @@ $ dist/Release-icc/icc-MacOSX/ai-parse --help
 2014-05-05 14:49:23 [INFO] (ai-parse.c:main:62) ai-parse v0.9.4 (Release)
 Usage: ai-parse [options] [[--] args]
 
-    -h, --help                show this help message and exit
+	-h, --help                show this help message and exit
+    -v, --verbosity=<int>     Verbosity level. Minimum (Default) 0. Increasing values increase parser verbosity.
     -o, --modelname=<str>     Model name
     -p, --path=<str>          CoNLL base directory including sections
     -s, --stage=<str>         [ optimize | train | parse ]
@@ -80,7 +81,10 @@ Usage: ai-parse [options] [[--] args]
     -k, --kernel=<str>        Kernel Type
     -a, --bias=<int>          Polynomial kernel additive term. Default is 1
     -c, --concurrency=<int>   Parallel MKL Slaves. Default is 90% of all machine cores
-    -b, --degree=<str>        Degree of polynomial kernel. Default is 2
+    -b, --degree=<int>        Degree of polynomial kernel. Default is 4
+    -z, --lambda=<str>        Lambda multiplier for RBF Kernel.Default value is 0.025
+    -u, --budget_type=<str>   Budget control methods. NONE|RANDOM
+    -g, --budget_size=<int>   Budget Target for budget based perceptron algorithms. Default 50K
 
 ```
 
@@ -95,6 +99,11 @@ Usage: ai-parse [options] [[--] args]
 		* One empty line between sentences.
 		* Each line includes following fields with tab separator
 		 `Word#` `Form` `POSTag` `True Parent#` `Model Parent#` `Section#`	
+
+`-v` parameter specifies the level of verbosity during parser execution. (This is not about logging)
+
+* 0 is the minimum (default) verbosity level
+* 1 causes hypothesis vectors to be dumped into a UNIX epoch labeled file after each perceptron pass over training data.
 
 `-o` parameter specifies a model name. Refer `-s` option for more details
 
@@ -151,6 +160,12 @@ Refer to `scripts/enrich.py` to create clones of original ConLL directory enrich
 `-a` is the bias parameter for `POLYNOMIAL` kernel.
 
 `-b` is the degree of `POLYNOMIAL` kernel function.
+
+`-z` is the lambda for `RBF` kernel.
+
+`-u` is the budgeting type. Default is `NONE`. `RANDOM` uses a random pruning to reduce the number of hypothesis vectors.
+
+`-g` is the budget limit for budget based perceptron algorithms. Default is `50K` hypothesis instances.
 
 ## Sample Runs
 ### Polynomial Kernel Perceptron Mode

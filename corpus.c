@@ -399,7 +399,7 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
                     boundary_v->data[0] = 1;
                 
                 if (to == 1)
-                    boundary_v->data[1] =1;
+                    boundary_v->data[1] = 1;
 
 
                 bigvector = vconcat(bigvector, boundary_v);

@@ -4,9 +4,13 @@
 #include "corpus.h"
 #include "dependency.h"
 #include "memman.h"
+#include "parseutil.h"
 
 extern enum BudgetMethod budget_method;
 extern size_t budget_target;
+
+extern int verbosity;
+extern const char *modelname;
 
 #include <time.h>
 #include <stdlib.h>
@@ -346,6 +350,41 @@ void update_average_alpha(KernelPerceptron kp) {
 
 }
 
+static void dump_support_vectors(KernelPerceptron mdl) {
+    char filename[1024];
+    time_t result = time(NULL);
+
+    sprintf(filename, "%s.%d.sv", modelname, (int) result);
+
+
+    FILE *fp = fopen(filename, "w");
+
+
+    for (size_t i = 0; i < mdl->M; i++) {
+
+        fprintf(fp, "%f\t", mdl->alpha[i]);
+        for (size_t j = 0; j < mdl->N; j++) {
+
+            fprintf(fp, "%f", mdl->kernel_matrix[i * mdl->N + j]);
+
+            if (j < mdl->N - 1)
+                fprintf(fp, "\t");
+
+
+
+        }
+        fprintf(fp, "\n");
+
+
+    }
+
+    fclose(fp);
+
+
+
+}
+ 
+
 void train_once_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus, int max_rec) {
     long match = 0, total = 0;
     //size_t slen=0;
@@ -430,6 +469,14 @@ void train_once_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus co
     log_info("Running training accuracy %lf", (match * 1.) / total);
     log_info("%u (%f of total %d) support vectors", nsv, (nsv * 1.) / max_sv, max_sv);
 
+    if (verbosity > 0) {
+
+        dump_support_vectors(mdl);
+
+
+
+    }
+
     update_average_alpha(mdl);
 
     return;
@@ -468,32 +515,32 @@ ParserTestMetric test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCor
 
             debug("\tTrue parent of word %d (with %s:%s) is %d whereas estimated parent is %d", j, postag, w->form, p, model[j + 1]);
 
-            int pmatch_nopunc = 0, ptotal_nopunc = 0,pmatch = 0;
+            int pmatch_nopunc = 0, ptotal_nopunc = 0, pmatch = 0;
             if (strcmp(postag, ",") != 0 && strcmp(postag, ":") != 0 && strcmp(postag, ".") != 0 && strcmp(postag, "``") != 0 && strcmp(postag, "''") != 0) {
 
-                if (p == model[j + 1]){
+                if (p == model[j + 1]) {
                     (metric->without_punc->true_prediction)++;
                     pmatch_nopunc++;
                 }
-                
+
                 ptotal_nopunc++;
 
                 (metric->without_punc->total_prediction)++;
             }
-            
-            if (pmatch_nopunc == ptotal_nopunc && pmatch_nopunc !=0){
+
+            if (pmatch_nopunc == ptotal_nopunc && pmatch_nopunc != 0) {
                 (metric->complete_sentence_without_punc)++;
             }
 
 
             (metric->all->total_prediction)++;
 
-            if (p == model[j + 1]){
+            if (p == model[j + 1]) {
                 pmatch++;
                 (metric->all->true_prediction)++;
             }
-            
-            if (pmatch == sent->length && pmatch!=0)
+
+            if (pmatch == sent->length && pmatch != 0)
                 (metric->complete_sentence)++;
         }
 
