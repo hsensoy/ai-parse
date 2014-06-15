@@ -29,9 +29,13 @@
 struct Word {
     int id;
     int parent;
-    char *postag;
+    
+    int predicted_parent;       // Parent predicted by the model.
+    
     char *form;
-    char *relation;
+    char *postag;
+    
+    DArray *conll_piece;
 
     vector embedding;
 };
