@@ -53,10 +53,11 @@ void train_once_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus co
  * @param mdl KernelPerceptron model
  * @param corpus Corpus to be parsed
  * @param exclude_punct Whether to exclude punctuation head estimation in evaluation.
- * @param ofp Dump the parsed sentences into a file if ofp != NULL
+ * @param gold_ofp Dump the parsed sentences with gold parent estimations into a file if gold_ofp != NULL
+ * @param model_ofp Dump the parsed sentences with model parent estimations into a file if model_ofp != NULL
  * @return accuracy 
  */
-ParserTestMetric test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus, bool exclude_punct,FILE *ofp);
+ParserTestMetric test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus, bool exclude_punct, FILE *gold_ofp, FILE *model_ofp);
 
 void mark_best_KernelPerceptronModel(KernelPerceptron kmodel, int numit);
  

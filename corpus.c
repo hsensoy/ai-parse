@@ -84,6 +84,8 @@ DArray* get_embedding_pattern_parts() {
                 } else if (strcmp(pattern, "rbf") == 0) { // Right Boundary Flag
                     ep->node = 'b';
                     ep->subnode = 'r';
+                } else if (strcmp(pattern, "root") == 0) { // Root Flag
+                    ep->node = 'r';
                 } else {
 
                     int n = sscanf(pattern, "%c%dv", &(ep->node), &(ep->offset));
@@ -180,6 +182,8 @@ CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embed
             embedding_concat_length += 6;
         else if (pattern->node == 'b')
             embedding_concat_length += 2;
+        else if (pattern->node == 'r')
+            embedding_concat_length += 1;
     }
 
     // Be optimistic about LINEAR transformation
@@ -389,15 +393,15 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
 
             }
 
-        }else if (pattern->node == 'b') {
+        } else if (pattern->node == 'b') {
             if (pattern->subnode == 'l') {
                 vector boundary_v = vector_create(2);
                 boundary_v->data[0] = 0;
                 boundary_v->data[1] = 0;
-                
+
                 if (from == 1)
                     boundary_v->data[0] = 1;
-                
+
                 if (to == 1)
                     boundary_v->data[1] = 1;
 
@@ -409,18 +413,30 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
                 vector boundary_v = vector_create(2);
                 boundary_v->data[0] = 0;
                 boundary_v->data[1] = 0;
-                
+
                 if (from == sent->length)
                     boundary_v->data[0] = 1;
-                
+
                 if (to == sent->length)
-                    boundary_v->data[1] =1;
+                    boundary_v->data[1] = 1;
 
 
                 bigvector = vconcat(bigvector, boundary_v);
 
                 vector_free(boundary_v);
             }
+        } else if (pattern->node == 'r') {
+
+            vector boundary_v = vector_create(1);
+            if (from == 0)
+                boundary_v->data[0] = 1;
+            else
+                boundary_v->data[0] = 0;
+
+
+            bigvector = vconcat(bigvector, boundary_v);
+
+            vector_free(boundary_v);
         }
     }
 
@@ -667,8 +683,7 @@ void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerce
 
             mkl_free(delta);
 
-        }
-        else if (kp->kernel == KLINEAR) {
+        } else if (kp->kernel == KLINEAR) {
             log_err("Linear kernel is not implemented yet");
             exit(1);
         }
@@ -802,44 +817,29 @@ void build_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, vector embeddi
 }
 
 Word parse_word(char* line, int embedding_dimension) {
-    DArray* tokens = split(line, "\t");
-
     Word w = (Word) malloc(sizeof (struct Word));
     check_mem(w);
+    
+    w->conll_piece = split(line, "\t");
 
-    w->id = atoi((char*) DArray_get(tokens, 0));
-    free((char*) DArray_get(tokens, 0));
+    w->id = atoi((char*) DArray_get(w->conll_piece, 0));
+    //free((char*) DArray_get(tokens, 0));
 
-    w->form = (char*) DArray_get(tokens, 1);
-    w->postag = (char*) DArray_get(tokens, 3);
+    w->form = (char*) DArray_get(w->conll_piece, 1);
+    w->postag = (char*) DArray_get(w->conll_piece, 3);
 
-    w->parent = atoi((char*) DArray_get(tokens, 6));
-    free((char*) DArray_get(tokens, 6));
-
-
-    // TODO: No relation on arcs
-    w->relation = NULL; //strdup(tokens[7]);
-
+    w->parent = atoi((char*) DArray_get(w->conll_piece, 6));
+    //free((char*) DArray_get(tokens, 6));
 
     if (embedding_dimension > 0) {
-        check(DArray_count(tokens) >= 11, "CoNLL files in corpus with embedding should contain at least 11 fields. 11. field being the embedding field. Found a line with only %d fields", DArray_count(tokens));
+        check(DArray_count(w->conll_piece) >= 11, "CoNLL files in corpus with embedding should contain at least 11 fields. 11. field being the embedding field. Found a line with only %d fields", DArray_count(w->conll_piece));
 
-        w->embedding = parse_vector((char*) DArray_get(tokens, 10));
-        free((char*) DArray_get(tokens, 10));
+        w->embedding = parse_vector((char*) DArray_get(w->conll_piece, 10));
+        //free((char*) DArray_get(tokens, 10));
 
         check(embedding_dimension == w->embedding->true_n, "Expected embedding dimension was %d but got %ld", embedding_dimension, w->embedding->true_n);
     } else
         w->embedding = NULL;
-
-    free((char*) DArray_get(tokens, 2));
-    free((char*) DArray_get(tokens, 4));
-    free((char*) DArray_get(tokens, 5));
-    free((char*) DArray_get(tokens, 7));
-    free((char*) DArray_get(tokens, 8));
-    free((char*) DArray_get(tokens, 9));
-
-    // TODO: This may cause problem ?!?
-    DArray_destroy(tokens);
 
     return w;
 
@@ -849,8 +849,8 @@ error:
 
 void Word_free(Word w) {
     vector_free(w->embedding);
-    free(w->form);
-    free(w->postag);
+    
+    DArray_clear_destroy(w->conll_piece);
 
     free(w);
 }
