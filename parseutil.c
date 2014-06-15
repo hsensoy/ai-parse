@@ -87,7 +87,7 @@ void* optimize(int max_numit, int max_rec, const char* path, const char* train_s
         if (kernel == KLINEAR)
             dev_metric = test_perceptron_parser(model, dev, true, true);
         else
-            dev_metric = test_KernelPerceptronModel(kmodel, dev, true, NULL);
+            dev_metric = test_KernelPerceptronModel(kmodel, dev, true, NULL, NULL);
         log_info("END-TEST: Iteration %d", numit);
 
         log_info("\nnumit=%d", numit);
@@ -156,16 +156,23 @@ void parseall(const KernelPerceptron model, const char* path, const char* test_s
     int best_iter = -1;
     float best_score = 0.0;
 
-    char* output_filename = (char*) malloc(sizeof (char) * (strlen(modelname) + 8));
+    char* output_filename = (char*) malloc(sizeof (char) * (strlen(modelname) + 13));
     check_mem(output_filename);
 
-    sprintf(output_filename, "%s.output", modelname);
-    FILE *fp = fopen(output_filename, "w");
-    ParserTestMetric test_metric = test_KernelPerceptronModel(model, test, true, fp);
-    fclose(fp);
+    sprintf(output_filename, "%s.conll.gold", modelname);
+    FILE *gold_fp = fopen(output_filename, "w");
+
+    sprintf(output_filename, "%s.conll.model", modelname);
+    FILE *model_fp = fopen(output_filename, "w");
+    ParserTestMetric test_metric = test_KernelPerceptronModel(model, test, true, gold_fp, model_fp);
+    fclose(gold_fp);
+    fclose(model_fp);
+
 
     printParserTestMetric(test_metric);
     freeParserTestMetric(test_metric);
+
+    free(output_filename);
 
     return;
 error:

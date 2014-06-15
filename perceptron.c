@@ -383,7 +383,6 @@ static void dump_support_vectors(KernelPerceptron mdl) {
 
 
 }
- 
 
 void train_once_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus, int max_rec) {
     long match = 0, total = 0;
@@ -482,7 +481,27 @@ void train_once_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus co
     return;
 }
 
-ParserTestMetric test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus, bool exclude_punct, FILE *ofp) {
+void dump_conll_word(Word w, bool true_parent, FILE* ofp) {
+
+    for (int i = 0; i < 10; i++) {
+
+        if (i != 6)
+            fprintf(ofp,"%s", (char*) DArray_get(w->conll_piece, i));
+        else {
+            if (true_parent)
+                fprintf(ofp,"%d", w->parent);
+            else
+                fprintf(ofp,"%d", w->predicted_parent);
+        }
+
+        if (i < 9)
+            fprintf(ofp,"\t");
+    }
+    fprintf(ofp,"\n");
+
+}
+
+ParserTestMetric test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus, bool exclude_punct, FILE *gold_ofp, FILE *model_ofp) {
     ParserTestMetric metric = create_ParserTestMetric();
 
     for (int si = 0; si < DArray_count(corpus->sentences); si++) {
@@ -503,22 +522,25 @@ ParserTestMetric test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCor
         debug("Now comparing actual arcs with model generated arcs for sentence %d (Last sentence is %d)", si, sent->length);
         for (int j = 0; j < sent->length; j++) {
             Word w = (Word) DArray_get(sent->words, j);
-            int p = w->parent;
-            char *postag = w->postag;
 
-            if (ofp != NULL) {
-                fprintf(ofp, "%d\t%s\t%s\t%d\t%d\t%u\n", j + 1, w->form, postag, p, model[j + 1], sent->section);
-            }
+            w->predicted_parent = model[j + 1];
 
-            if (p == 0 && model[j + 1] == 0)
+            // TODO: One file per section idea 
+            if (model_ofp != NULL)
+                dump_conll_word(w, true, model_ofp);
+
+            if (gold_ofp != NULL)
+                dump_conll_word(w, false, gold_ofp);
+
+            if (w->parent == 0 && model[j + 1] == 0)
                 (metric->true_root_predicted)++;
 
-            debug("\tTrue parent of word %d (with %s:%s) is %d whereas estimated parent is %d", j, postag, w->form, p, model[j + 1]);
+            debug("\tTrue parent of word %d (with %s:%s) is %d whereas estimated parent is %d", j+1, w->postag, w->form, w->parent, model[j + 1]);
 
             int pmatch_nopunc = 0, ptotal_nopunc = 0, pmatch = 0;
-            if (strcmp(postag, ",") != 0 && strcmp(postag, ":") != 0 && strcmp(postag, ".") != 0 && strcmp(postag, "``") != 0 && strcmp(postag, "''") != 0) {
+            if (strcmp(w->postag, ",") != 0 && strcmp(w->postag, ":") != 0 && strcmp(w->postag, ".") != 0 && strcmp(w->postag, "``") != 0 && strcmp(w->postag, "''") != 0) {
 
-                if (p == model[j + 1]) {
+                if (w->parent == model[j + 1]) {
                     (metric->without_punc->true_prediction)++;
                     pmatch_nopunc++;
                 }
@@ -535,7 +557,7 @@ ParserTestMetric test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCor
 
             (metric->all->total_prediction)++;
 
-            if (p == model[j + 1]) {
+            if (w->parent == model[j + 1]) {
                 pmatch++;
                 (metric->all->true_prediction)++;
             }
@@ -544,8 +566,12 @@ ParserTestMetric test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCor
                 (metric->complete_sentence)++;
         }
 
-        if (ofp != NULL) {
-            fprintf(ofp, "\n");
+        if (model_ofp != NULL) {
+            fprintf(model_ofp, "\n");
+        }
+
+        if (gold_ofp != NULL) {
+            fprintf(gold_ofp, "\n");
         }
 
         free(model);
