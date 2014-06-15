@@ -907,9 +907,89 @@ void parse_and_dump(PerceptronModel mdl, FILE *fp, CoNLLCorpus corpus) {
     }
 }
 
-double test_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, bool exclude_punct, bool use_temp) {
+HeadPredictionMetric create_HeadPredictionMetric() {
+    HeadPredictionMetric hpm;
 
-    int match = 0, total = 0;
+    hpm = (HeadPredictionMetric) malloc(sizeof (struct HeadPredictionMetric));
+
+    check(hpm != NULL, "Memory allocation error for HeadPredictionMetric struct");
+
+    hpm->total_prediction = 0;
+    hpm->true_prediction = 0;
+
+
+
+    return hpm;
+error:
+
+    exit(1);
+}
+
+void free_HeadPredictionMetric(HeadPredictionMetric hpm) {
+    free(hpm);
+}
+
+ParserTestMetric create_ParserTestMetric() {
+    ParserTestMetric ptm;
+
+    ptm = (ParserTestMetric) malloc(sizeof (struct ParserTestMetric));
+
+    check(ptm != NULL, "Memory allocation error on ParserTestMetric");
+
+    ptm->all = create_HeadPredictionMetric();
+    ptm->without_punc = create_HeadPredictionMetric();
+
+    ptm->true_root_predicted = 0;
+    ptm->total_sentence = 0;
+    ptm->complete_sentence = 0;
+    ptm->complete_sentence_without_punc = 0;
+
+    return ptm;
+
+error:
+    exit(1);
+}
+
+void freeParserTestMetric(ParserTestMetric ptm) {
+    free(ptm->all);
+    free(ptm->without_punc);
+
+    free(ptm);
+}
+
+void printParserTestMetric(ParserTestMetric metric) {
+
+    log_info("\t Parent prediction accuracy: %f(%d out of %d)", (metric->all->true_prediction)*1. / (metric->all->total_prediction), metric->all->true_prediction, metric->all->total_prediction);
+    log_info("\t Parent prediction accuracy (punctuations excluded): %f(%d out of %d)", (metric->without_punc->true_prediction)*1. / (metric->without_punc->total_prediction), metric->without_punc->true_prediction, metric->without_punc->total_prediction);
+    
+    log_info("\t ROOT Prediction accuracy: %f (%d out of %d)",(metric->true_root_predicted*1.)/metric->total_sentence, metric->true_root_predicted,metric->total_sentence );
+    
+    log_info("\t Complete sentence: %f (%d out of %d)", (metric->complete_sentence*1.)/metric->total_sentence,metric->complete_sentence,metric->total_sentence);
+    log_info("\t Complete sentence (punctuations excluded): %f (%d out of %d)", (metric->complete_sentence_without_punc*1.)/metric->total_sentence,metric->complete_sentence_without_punc,metric->total_sentence);
+}
+
+
+/**
+ * 
+ * @param mdl
+ * @param corpus
+ * @param exclude_punct
+ * @param use_temp
+ * @return 
+ * 
+ * 
+ * 
+ * int true_head_predicted;
+    int true_head_predicted_without_punc;
+    int true_root_predicted;
+    int total_head;
+    
+    int total_sentence;
+ */
+ParserTestMetric test_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, bool exclude_punct, bool use_temp) {
+
+    ParserTestMetric metric = create_ParserTestMetric();
+
     for (int si = 0; si < DArray_count(corpus->sentences); si++) {
         FeaturedSentence sent = DArray_get(corpus->sentences, si);
 
@@ -929,28 +1009,30 @@ double test_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, boo
         int *model = parse(sent);
 
 
+        (metric->total_sentence)++;
         debug("Now comparing actual arcs with model generated arcs for sentence %d (Last sentence is %d)", si, sent->length);
         for (int j = 0; j < sent->length; j++) {
             Word w = (Word) DArray_get(sent->words, j);
             int p = w->parent;
             char *postag = w->postag;
 
+            if (p == 0 && model[j + 1] == 0)
+                (metric->true_root_predicted)++;
+
             debug("\tTrue parent of word %d (with %s:%s) is %d whereas estimated parent is %d", j, postag, w->form, p, model[j + 1]);
 
-            if (exclude_punct) {
-                if (strcmp(postag, ",") != 0 && strcmp(postag, ":") != 0 && strcmp(postag, ".") != 0 && strcmp(postag, "``") != 0 && strcmp(postag, "''") != 0) {
+            if (strcmp(postag, ",") != 0 && strcmp(postag, ":") != 0 && strcmp(postag, ".") != 0 && strcmp(postag, "``") != 0 && strcmp(postag, "''") != 0) {
 
-                    if (p == model[j + 1])
-                        match++;
-
-                    total++;
-                }
-            } else {
                 if (p == model[j + 1])
-                    match++;
+                    (metric->without_punc->true_prediction)++;
 
-                total++;
+                (metric->without_punc->total_prediction)++;
             }
+
+            (metric->all->total_prediction)++;
+
+            if (p == model[j + 1])
+                (metric->all->true_prediction)++;
         }
 
         free(model);
@@ -963,10 +1045,10 @@ double test_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, boo
 
     }
 
-    return (match * 1.) / total;
+    return metric;
 }
 
-void mark_best_PerceptronModel(PerceptronModel model,int numit) {
+void mark_best_PerceptronModel(PerceptronModel model, int numit) {
     model->best_numit = numit;
     memcpy(model->embedding_w_best->data, model->embedding_w_temp->data, sizeof (float)*model->embedding_w_best->true_n);
 }

@@ -45,6 +45,8 @@ int polynomial_degree = 4;
 float bias = 1.0;
 float rbf_lambda = 0.025;
 
+int verbosity = 0;
+
 /*
  * 
  */
@@ -72,6 +74,7 @@ int main(int argc, char** argv) {
     struct argparse_option options[] = {
         OPT_HELP(),
         //OPT_BOOLEAN('f', "force", &force, "force to do", NULL),
+        OPT_INTEGER('v', "verbosity", &verbosity, "Verbosity level. Minimum (Default) 0. Increasing values increase parser verbosity.", NULL),
         OPT_STRING('o', "modelname", &modelname, "Model name", NULL),
         OPT_STRING('p', "path", &path, "CoNLL base directory including sections", NULL),
         OPT_STRING('s', "stage", &stage, "[ optimize | train | parse ]", NULL),
