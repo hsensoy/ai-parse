@@ -46,11 +46,9 @@ vector vector_create(size_t n) {
     vector v = (vector) malloc(sizeof (struct vector));
     check_mem(v);
 
-    v->true_n = n;
-    v->n = aligned_size(v->true_n);
-
-    v->data = alloc_aligned(v->n);
-
+    v->n = n;
+    v->data = mkl_64bytes_malloc(sizeof(float) * n);
+    
     return v;
 
 error:
@@ -59,8 +57,7 @@ error:
 
 void vector_free(vector v) {
     if (v != NULL) {
-        //mkl_free(v->data);
-        free(v->data);
+        mkl_free(v->data);
         free(v);
     }
 
@@ -69,7 +66,7 @@ void vector_free(vector v) {
 void check_vector_len(const vector v1, const vector v2) {
     check(v1 != NULL, "v1 can not be NULL");
     check(v2 != NULL, "v2 can not be NULL");
-    check(v1->n == v2->n && v1->true_n == v2->true_n, "v1(%ld:%ld) differs from v2(%ld:%ld) in size", v1->true_n, v1->n, v2->true_n, v2->n);
+    check(v1->n == v2->n, "v1(%ld) differs from v2(%ld) in size", v1->n, v2->n);
 
     return;
 error:
@@ -81,16 +78,16 @@ vector vconcat(vector target, const vector v) {
 
     if (target == NULL) {
 
-        target = vector_create(v->true_n);
+        target = vector_create(v->n);
 
         memcpy(target->data, v->data, sizeof (float) * (v->n));
     } else {
         vector temp = target;
 
-        target = vector_create(v->true_n + target->true_n);
+        target = vector_create(v->n + target->n);
 
-        memcpy(target->data, temp->data, sizeof (float) * temp->true_n);
-        memcpy(target->data + temp->true_n, v->data, sizeof (float) * v->true_n);
+        memcpy(target->data, temp->data, sizeof (float) * temp->n);
+        memcpy(target->data + temp->n, v->data, sizeof (float) * v->n);
 
         vector_free(temp);
     }
@@ -103,9 +100,9 @@ error:
 
 void vprint(vector v) {
 
-    log_info("%ld:\t", v->true_n);
+    log_info("%ld:\t", v->n);
 
-    for (int _v = 0; _v < v->true_n; _v++)
+    for (int _v = 0; _v < v->n; _v++)
         log_info("%f ", v->data[_v]);
 }
 
@@ -113,24 +110,15 @@ void vadd(vector target, const vector src, float mult) {
     check_vector_len(target, src);
 
 #pragma ivdep
-    for (int i = 0; i < target->true_n; i++) {
+    for (int i = 0; i < target->n; i++) {
         (target->data)[i] += mult * (src->data)[i];
     }
 }
 
 float vdot(vector v1, vector v2) {
-    check_vector_len(v1, v2);
+   check_vector_len(v1, v2);
 
-
-    float sum = 0.0;
-
-    for (int i = 0; i < v1->n; i++)
-        sum += (v1->data)[i] * (v2->data)[i];
-
-    return sum;
-
-
-    //return cblas_sdot(v1->true_n, v1->data,1, v2->data,1);
+   return cblas_sdot(v1->n, v1->data,1, v2->data,1);
 }
 
 void vdiv(vector v, int div) {
@@ -159,10 +147,10 @@ void vnorm(vector v, size_t n) {
 
 vector vlinear(vector target, vector src) {
     if (target == NULL) {
-        vector vlinear = vector_create(src->true_n);
+        vector vlinear = vector_create(src->n);
 
         #pragma ivdep
-        for (int i = 0; i < src->true_n; i++) {
+        for (int i = 0; i < src->n; i++) {
             vlinear->data[i] = src->data[i];
         }
 
@@ -170,10 +158,10 @@ vector vlinear(vector target, vector src) {
 
         return vlinear;
     } else {
-        check(target->true_n == src->true_n, "Target vector (%ld) and Source vector (%ld) should be equal dimension", target->true_n, src->true_n);
+        check(target->n == src->n, "Target vector (%ld) and Source vector (%ld) should be equal dimension", target->n, src->n);
         
         #pragma ivdep
-        for (int i = 0; i < src->true_n; i++) {
+        for (int i = 0; i < src->n; i++) {
             target->data[i] = src->data[i];
         }
 
@@ -193,13 +181,13 @@ vector vquadratic(vector target, vector src, float d) {
     int vquad_indx = 0;
 
     if (target == NULL) {
-        vector vquad = vector_create((src->true_n * (src->true_n + 3)) / 2);
+        vector vquad = vector_create((src->n * (src->n + 3)) / 2);
 
-        for (int i = 0; i < src->true_n; i++) {
+        for (int i = 0; i < src->n; i++) {
             vquad->data[vquad_indx++] = src->data[i] * src->data[i];
 
 
-            for (int j = i + 1; j < src->true_n; j++) {
+            for (int j = i + 1; j < src->n; j++) {
 
 
                 vquad->data[vquad_indx++] = sqrt_of_2 * src->data[i] * src->data[j];
@@ -214,13 +202,13 @@ vector vquadratic(vector target, vector src, float d) {
 
         return vquad;
     } else {
-        check(target->true_n == src->true_n, "Target vector (%ld) and Source vector (%ld) should be equal dimension", target->true_n, src->true_n);
+        check(target->n == (src->n * (src->n + 3)) / 2, "Target vector (%ld) and Transformed Source vector (%ld) should be equal dimension", target->n, (src->n * (src->n + 3)) / 2);
 
-        for (int i = 0; i < src->true_n; i++) {
+        for (int i = 0; i < src->n; i++) {
             target->data[vquad_indx++] = src->data[i] * src->data[i];
 
 
-            for (int j = i + 1; j < src->true_n; j++) {
+            for (int j = i + 1; j < src->n; j++) {
 
 
                 target->data[vquad_indx++] = sqrt_of_2 * src->data[i] * src->data[j];

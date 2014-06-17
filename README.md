@@ -94,7 +94,7 @@ Usage: ai-parse [options] [[--] args]
 	* _optimize_ option generates a file with `.model` extension and model name (given by `-o` option). This file is used by _parse_ option to load the model.
 *	_train_ a dependency parsing model using a training set with given hyper parameters, and 
 *	_parse_ a given a set of sentences by using  a given dependency parsing model.
-	* _parse_ option generates two files with `<model_name>.conll.gold` and `<model_name>.conll.model` format (`<model_name>` is given by `-o` option in `optimise` or `train` stage). Files are in 10 column CoNLL format with parent field difference. `<model_name>.conll.gold` includes true parent whereas `<model_name>.conll.model` includes predicted parent.	
+	* _parse_ option generates two files with `<model_name>.conll.gold` and `<model_name>.model.conll` format (`<model_name>` is given by `-o` option in `optimise` or `train` stage). Files are in 10 column CoNLL format with parent field difference. `<model_name>.gold.conll` includes true parent whereas `<model_name>.model.conll` includes predicted parent.	
 
 `-v` parameter specifies the level of verbosity during parser execution. (This is not about logging)
 

@@ -58,8 +58,10 @@ void* optimize(int max_numit, int max_rec, const char* path, const char* train_s
 
     PerceptronModel model = NULL;
     KernelPerceptron kmodel = NULL;
-    if (kernel == KLINEAR)
-        model = PerceptronModel_create(train, NULL);
+    if (kernel == KLINEAR){   
+        log_info("Creating a averaged perceptron model");
+        model = create_PerceptronModel(train->transformed_embedding_length, NULL);
+    }
     else if (kernel == KPOLYNOMIAL)
         kmodel = create_PolynomialKernelPerceptron(polynomial_degree, bias);
     else
@@ -75,7 +77,7 @@ void* optimize(int max_numit, int max_rec, const char* path, const char* train_s
         log_info("BEGIN-TRAIN: Iteration %d", numit);
 
         if (kernel == KLINEAR)
-            train_perceptron_once(model, train, max_rec);
+            train_once_PerceptronModel(model, train, max_rec);
         else
             train_once_KernelPerceptronModel(kmodel, train, max_rec);
 
@@ -84,8 +86,9 @@ void* optimize(int max_numit, int max_rec, const char* path, const char* train_s
 
         ParserTestMetric dev_metric;
         log_info("BEGIN-TEST: Iteration %d", numit);
+        
         if (kernel == KLINEAR)
-            dev_metric = test_perceptron_parser(model, dev, true, true);
+            dev_metric = test_KernelPerceptronModel(model, dev, true, NULL, NULL);
         else
             dev_metric = test_KernelPerceptronModel(kmodel, dev, true, NULL, NULL);
         log_info("END-TEST: Iteration %d", numit);
@@ -139,7 +142,7 @@ error:
 
 }
 
-void parseall(const KernelPerceptron model, const char* path, const char* test_sections_str, int embedding_dimension) {
+void parseall(const void *model, const char* path, const char* test_sections_str, int embedding_dimension) {
     DArray *test_sections = parse_range(test_sections_str);
 
     signal(SIGINT, intHandler);
@@ -150,24 +153,18 @@ void parseall(const KernelPerceptron model, const char* path, const char* test_s
 
     log_info("Reading test corpus");
     read_corpus(test, false);
-
-    int numit;
-
-    int best_iter = -1;
-    float best_score = 0.0;
-
+    
     char* output_filename = (char*) malloc(sizeof (char) * (strlen(modelname) + 13));
     check_mem(output_filename);
 
-    sprintf(output_filename, "%s.conll.gold", modelname);
+    sprintf(output_filename, "%s.gold.conll", modelname);
     FILE *gold_fp = fopen(output_filename, "w");
 
-    sprintf(output_filename, "%s.conll.model", modelname);
+    sprintf(output_filename, "%s.model.conll", modelname);
     FILE *model_fp = fopen(output_filename, "w");
     ParserTestMetric test_metric = test_KernelPerceptronModel(model, test, true, gold_fp, model_fp);
     fclose(gold_fp);
     fclose(model_fp);
-
 
     printParserTestMetric(test_metric);
     freeParserTestMetric(test_metric);

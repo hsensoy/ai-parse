@@ -19,17 +19,16 @@
 #include "uthash.h"
 #include "debug.h"
 
-struct vector{
-	size_t n;
-	size_t true_n;
-	float* data;
+struct vector {
+    size_t n;
+    float* data;
 };
 
 typedef struct vector* vector;
 
-vector parse_vector( char *buff);
+vector parse_vector(char *buff);
 
-vector vector_create( size_t n );
+vector vector_create(size_t n);
 void vector_free(vector);
 
 
@@ -66,8 +65,8 @@ vector vconcat(vector target, const vector v);
  * @param v2
  * @return v1.v2
  */
-static inline float linear(vector v1, vector v2){
-    return vdot(v1,v2);
+static inline float linear(vector v1, vector v2) {
+    return vdot(v1, v2);
 }
 
 /**
@@ -77,8 +76,8 @@ static inline float linear(vector v1, vector v2){
  * @param d 
  * @param n
  * @return (v1.v2 + d )^n
- */ 
-static inline float polynomial(vector v1, vector v2, float d, int n){
-    return pow( vdot(v1,v2) + d ,n) ;
+ */
+static inline float polynomial(vector v1, vector v2, float d, int n) {
+    return pow(vdot(v1, v2) + d, n);
 }
 #endif

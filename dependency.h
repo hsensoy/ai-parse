@@ -123,14 +123,19 @@ FeatureValue FeatureValue_create(uint32_t fid);
 int feature_equal(void *k1, void *k2);
 uint32_t feature_hash(void *f);
 
-PerceptronModel PerceptronModel_create(CoNLLCorpus training, IntegerIndexedFeatures iif);
+/**
+ * 
+ * @param transformed_embedding_length Transformed embedding length.
+ * @param iif For feature enhancements (current value is always NULL)
+ * @return initialized Perceptron model
+ */
+PerceptronModel create_PerceptronModel(size_t transformed_embedding_length, IntegerIndexedFeatures iif);
 void PerceptronModel_free(PerceptronModel model);
 
 void train_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, int numit, int max_rec);
-void train_perceptron_once(PerceptronModel mdl, const CoNLLCorpus corpus, int max_rec);
+void train_once_PerceptronModel(PerceptronModel mdl, const CoNLLCorpus corpus, int max_rec);
 
 ParserTestMetric create_ParserTestMetric();
-ParserTestMetric test_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, bool exclude_punct, bool use_temp);
 void printParserTestMetric(ParserTestMetric metric);
 
 void freeParserTestMetric(ParserTestMetric ptm);

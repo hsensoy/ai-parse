@@ -7,3 +7,12 @@ conll_short
 
 # Model files
 *.model
+
+# CoNLL files
+*.conll
+
+# SV files
+*.sv
+
+# Compressed files
+*.gz

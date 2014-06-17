@@ -166,8 +166,6 @@ int main(int argc, char** argv) {
 
     if (strcmp(stage, "optimize") == 0 || strcmp(stage, "train") == 0) {
 
-
-
         if (maxnumit <= 0) {
             log_warn("maxnumit is set to %d", DEFAULT_MAX_NUMIT);
 
@@ -181,8 +179,7 @@ int main(int argc, char** argv) {
             log_info("Polynomial kernel will be used with bias %f and degree %d", bias, polynomial_degree);
 
             kernel = KPOLYNOMIAL;
-        }            //kernel_workbench(maxnumit, maxrec, path, training, dev, edimension, kernel, bias, degree);
-        else if (strcmp(kernel_str, "GAUSSIAN") == 0 || strcmp(kernel_str, "RBF") == 0) {
+        } else if (strcmp(kernel_str, "GAUSSIAN") == 0 || strcmp(kernel_str, "RBF") == 0) {
 
             log_info("RBF/GAUSSIAN kernel will be used with lambda %f ", rbf_lambda);
 
@@ -234,13 +231,15 @@ int main(int argc, char** argv) {
 
         check(fp != NULL, "%s could not be opened", model_filename);
 
-        KernelPerceptron model = load_KernelPerceptronModel(fp);
+        void *model;
+        if (kernel == KLINEAR)
+            model = load_PerceptronModel(fp);
+        else
+            model = load_KernelPerceptronModel(fp);
 
         fclose(fp);
 
-        if (model == NULL) {
-            exit(1);
-        }
+        check(model != NULL, "Error in loading model file");
 
         log_info("Model loaded from %s successfully", model_filename);
 
