@@ -96,6 +96,8 @@ DArray* get_embedding_pattern_parts() {
 
                 DArray_push(embedding_pattern_parts, ep);
             }
+            
+            debug("Number of embedding patterns is %d", DArray_count(embedding_pattern_parts));
 
         } else {
             embedding_pattern_parts = NULL;
@@ -281,6 +283,7 @@ FeatureMatrix FeatureMatrix_create(int sent_length, uint32_t embedding_length, b
     matrix->embedding_length = embedding_length;
     matrix->has_discrete_features = has_discrete_features;
 
+    debug("Embedding vector length is %ld", embedding_length);
 
     log_info("Allocating a %d x %d FeatureMatrix", matrix->size, matrix->size);
     for (int i = 0; i < matrix->size; i++) {
@@ -337,7 +340,6 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
 
     DArray* patterns = get_embedding_pattern_parts();
 
-    debug("Number of embedding patterns is %d", DArray_count(patterns));
     for (int pi = 0; pi < DArray_count(patterns); pi++) {
         EmbeddingPattern pattern = (EmbeddingPattern) DArray_get(patterns, pi);
 
@@ -486,7 +488,7 @@ void set_FeatureMatrix(Hashmap* featuremap, CoNLLCorpus corpus, int sentence_idx
                 if (corpus->hasembeddings) {
                     build_embedding_feature(sentence, _from, _to);
 
-                    debug("Embedding vector length is %ld:%ld", (sentence->feature_matrix_ref->matrix_data)[_from][_to]->continous_v->true_n, (sentence->feature_matrix_ref->matrix_data)[_from][_to]->continous_v->n);
+
 
                     //if ((sentence->feature_matrix)[_from][_to]->continous_v->true_n > 50)
                     //	log_info("%ld",(sentence->feature_matrix)[_from][_to]->continous_v->true_n);
@@ -534,7 +536,7 @@ float* get_embedding_matrix(CoNLLCorpus corpus, int sentence_idx, size_t *m, siz
     int length = sentence->length;
 
     *m = (length + 1) * length - length;
-    *n = (sentence->feature_matrix_ref->matrix_data)[0][1]->continous_v->true_n;
+    *n = (sentence->feature_matrix_ref->matrix_data)[0][1]->continous_v->n;
 
     debug("Embedding matrix is %d x %d", *m, *n);
 
@@ -547,7 +549,7 @@ float* get_embedding_matrix(CoNLLCorpus corpus, int sentence_idx, size_t *m, siz
 
                 vector embedding = (sentence->feature_matrix_ref->matrix_data)[_from][_to]->continous_v;
 
-                for (int i = 0; i < embedding->true_n; i++)
+                for (int i = 0; i < embedding->n; i++)
                     matrix[offset++] = (embedding->data)[i];
             }
         }
@@ -799,7 +801,7 @@ void build_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, vector embeddi
 
                 if (corpus->hasembeddings) {
 
-                    debug("%d->%d\n", _from, _to);
+                    //debug("%d->%d\n", _from, _to);
                     vector embedding = (sentence->feature_matrix_ref->matrix_data)[_from][_to]->continous_v;
 
                     if (embedding == NULL) {
@@ -819,7 +821,7 @@ void build_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, vector embeddi
 Word parse_word(char* line, int embedding_dimension) {
     Word w = (Word) malloc(sizeof (struct Word));
     check_mem(w);
-    
+
     w->conll_piece = split(line, "\t");
 
     w->id = atoi((char*) DArray_get(w->conll_piece, 0));
@@ -837,7 +839,7 @@ Word parse_word(char* line, int embedding_dimension) {
         w->embedding = parse_vector((char*) DArray_get(w->conll_piece, 10));
         //free((char*) DArray_get(tokens, 10));
 
-        check(embedding_dimension == w->embedding->true_n, "Expected embedding dimension was %d but got %ld", embedding_dimension, w->embedding->true_n);
+        check(embedding_dimension == w->embedding->n, "Expected embedding dimension was %d but got %ld", embedding_dimension, w->embedding->n);
     } else
         w->embedding = NULL;
 
@@ -849,7 +851,7 @@ error:
 
 void Word_free(Word w) {
     vector_free(w->embedding);
-    
+
     DArray_clear_destroy(w->conll_piece);
 
     free(w);

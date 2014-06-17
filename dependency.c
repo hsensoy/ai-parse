@@ -469,7 +469,7 @@ int nmatch(const int* model, const int* empirical, int length) {
         if (model[i] == empirical[i]) {
             nmatch++;
 
-            debug("%d -> %d is correct\n", model[i], i);
+            //debug("%d -> %d is correct\n", model[i], i);
         }
     }
 
@@ -599,40 +599,45 @@ for(int j = left_context + 1; j < right_context;j++){
 
 }
 
-PerceptronModel PerceptronModel_create(CoNLLCorpus training, IntegerIndexedFeatures iif) {
+PerceptronModel create_PerceptronModel(size_t transformed_embedding_length, IntegerIndexedFeatures iif) {
 
     PerceptronModel model = (PerceptronModel) malloc(sizeof (struct PerceptronModel));
     check_mem(model);
+    
+    model->embedding_w = NULL;
+    model->discrete_w = NULL;
 
     model->c = 1;
 
     //FeatureMatrix mat = training->feature_matrix_singleton;
 
-    if (training->hasembeddings) {
-        model->embedding_w = vector_create(training->transformed_embedding_length);
-        model->embedding_w_avg = vector_create(training->transformed_embedding_length);
-        model->embedding_w_temp = vector_create(training->transformed_embedding_length);
-        model->embedding_w_best = vector_create(training->transformed_embedding_length);
+    if (transformed_embedding_length > 0) {
+        model->embedding_w = vector_create(transformed_embedding_length);
+        model->embedding_w_avg = vector_create(transformed_embedding_length);
+        model->embedding_w_temp = vector_create(transformed_embedding_length);
+        model->embedding_w_best = vector_create(transformed_embedding_length);
 
-        log_info("Embedding features of %ld dimension", model->embedding_w->true_n);
+        log_info("Embedding features of %ld dimension", model->embedding_w->n);
     } else {
         model->embedding_w = NULL;
         model->embedding_w_avg = NULL;
         model->embedding_w_temp = NULL;
     }
 
+    /*
     if (training->disrete_patterns_parts) {
         model->discrete_w = vector_create(iif->feature_id);
         model->discrete_w_avg = vector_create(iif->feature_id);
         model->discrete_w_temp = vector_create(iif->feature_id);
 
-        log_info("Discrete features of %ld dimension", model->discrete_w->true_n);
+        log_info("Discrete features of %ld dimension", model->discrete_w->n);
     } else {
         model->discrete_w = NULL;
         model->discrete_w_avg = NULL;
         model->discrete_w_temp = NULL;
 
     }
+     */
 
     return model;
 error:
@@ -687,7 +692,7 @@ void printfembedding(FeatureVector **mat, size_t n) {
     }
 }
 
-void train_perceptron_once(PerceptronModel mdl, const CoNLLCorpus corpus, int max_rec) {
+void train_once_PerceptronModel(PerceptronModel mdl, const CoNLLCorpus corpus, int max_rec) {
     long match = 0, total = 0;
     //size_t slen=0;
 
@@ -697,11 +702,10 @@ void train_perceptron_once(PerceptronModel mdl, const CoNLLCorpus corpus, int ma
     log_info("Total number of training instances %d", (max_rec == -1) ? DArray_count(corpus->sentences) : max_rec);
     for (int si = 0; si < ((max_rec == -1) ? DArray_count(corpus->sentences) : max_rec); si++) {
         //log_info("Parsing sentence %d/%d", si+1, DArray_count(corpus));
-        debug("Sentence %d", si);
         FeaturedSentence sent = (FeaturedSentence) DArray_get(corpus->sentences, si);
 
 
-        debug("Building feature matrix for sentence %d", si);
+        debug("Building feature matrix for sentence %d of length %d", si, sent->length);
         set_FeatureMatrix(NULL, corpus, si);
 
 
@@ -860,9 +864,9 @@ void dump_PerceptronModel(FILE *fp, int edimension, vector w, int best_numit) {
             break;
     }
 
-    fprintf(fp, "dimension=%ld\n", w->true_n);
+    fprintf(fp, "dimension=%ld\n", w->n);
 
-    for (int i = 0; i < w->true_n; i++) {
+    for (int i = 0; i < w->n; i++) {
         fprintf(fp, "%d=%f\n", i, w->data[i]);
     }
 }
@@ -873,7 +877,7 @@ void train_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, int 
 
         log_info("%d iteration in parser training...", (n + 1));
 
-        train_perceptron_once(mdl, corpus, max_rec);
+        train_once_PerceptronModel(mdl, corpus, max_rec);
     }
 
     if (corpus->disrete_patterns_parts)
@@ -968,87 +972,7 @@ void printParserTestMetric(ParserTestMetric metric) {
     log_info("\t Complete sentence (punctuations excluded): %f (%d out of %d)", (metric->complete_sentence_without_punc*1.)/metric->total_sentence,metric->complete_sentence_without_punc,metric->total_sentence);
 }
 
-
-/**
- * 
- * @param mdl
- * @param corpus
- * @param exclude_punct
- * @param use_temp
- * @return 
- * 
- * 
- * 
- * int true_head_predicted;
-    int true_head_predicted_without_punc;
-    int true_root_predicted;
-    int total_head;
-    
-    int total_sentence;
- */
-ParserTestMetric test_perceptron_parser(PerceptronModel mdl, const CoNLLCorpus corpus, bool exclude_punct, bool use_temp) {
-
-    ParserTestMetric metric = create_ParserTestMetric();
-
-    for (int si = 0; si < DArray_count(corpus->sentences); si++) {
-        FeaturedSentence sent = DArray_get(corpus->sentences, si);
-
-        debug("Generating feature matrix for sentence %d", si);
-        set_FeatureMatrix(NULL, corpus, si);
-
-        debug("Generating adj. matrix for sentence %d", si);
-        if (use_temp) {
-            debug("\tI will be using a weight vector of length %ld", mdl->embedding_w_temp->true_n);
-            build_adjacency_matrix(corpus, si, mdl->embedding_w_temp, NULL);
-        } else {
-            debug("\tI will be using a weight vector of length %ld", mdl->embedding_w->true_n);
-            build_adjacency_matrix(corpus, si, mdl->embedding_w, NULL);
-        }
-
-        debug("Now parsing sentence %d", si);
-        int *model = parse(sent);
-
-
-        (metric->total_sentence)++;
-        debug("Now comparing actual arcs with model generated arcs for sentence %d (Last sentence is %d)", si, sent->length);
-        for (int j = 0; j < sent->length; j++) {
-            Word w = (Word) DArray_get(sent->words, j);
-            int p = w->parent;
-            char *postag = w->postag;
-
-            if (p == 0 && model[j + 1] == 0)
-                (metric->true_root_predicted)++;
-
-            debug("\tTrue parent of word %d (with %s:%s) is %d whereas estimated parent is %d", j, postag, w->form, p, model[j + 1]);
-
-            if (strcmp(postag, ",") != 0 && strcmp(postag, ":") != 0 && strcmp(postag, ".") != 0 && strcmp(postag, "``") != 0 && strcmp(postag, "''") != 0) {
-
-                if (p == model[j + 1])
-                    (metric->without_punc->true_prediction)++;
-
-                (metric->without_punc->total_prediction)++;
-            }
-
-            (metric->all->total_prediction)++;
-
-            if (p == model[j + 1])
-                (metric->all->true_prediction)++;
-        }
-
-        free(model);
-
-
-        debug("Releasing feature matrix for sentence %d", si);
-
-        free_feature_matrix(corpus, si);
-
-
-    }
-
-    return metric;
-}
-
 void mark_best_PerceptronModel(PerceptronModel model, int numit) {
     model->best_numit = numit;
-    memcpy(model->embedding_w_best->data, model->embedding_w_temp->data, sizeof (float)*model->embedding_w_best->true_n);
+    memcpy(model->embedding_w_best->data, model->embedding_w_temp->data, sizeof (float)*model->embedding_w_best->n);
 }

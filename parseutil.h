@@ -34,7 +34,14 @@ extern "C" {
  */
 void* optimize(int max_numit, int max_rec, const char* path, const char* train_sections_str, const char* dev_sections_str, int embedding_dimension);
 
-void parseall(const KernelPerceptron model, const char* path, const char* test_sections_str, int embedding_dimension);
+/**
+ * 
+ * @param model Abstract perceptron model (Perceptron/KernelPerceptron)
+ * @param path
+ * @param test_sections_str
+ * @param embedding_dimension
+ */
+void parseall(const void *model, const char* path, const char* test_sections_str, int embedding_dimension);
 
 #endif	/* PARSEUTIL_H */
 

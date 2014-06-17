@@ -11,6 +11,7 @@ extern size_t budget_target;
 
 extern int verbosity;
 extern const char *modelname;
+extern enum Kernel kernel;
 
 #include <time.h>
 #include <stdlib.h>
@@ -155,23 +156,23 @@ void update_alpha(KernelPerceptron kp, uint32_t sidx, uint16_t from, uint16_t to
 
 
         if (n == 0) {
-            kp->N = v->true_n;
-            kp->kernel_matrix = (float*) mkl_64bytes_malloc((n + 1) * v->true_n * sizeof (float));
+            kp->N = v->n;
+            kp->kernel_matrix = (float*) mkl_64bytes_malloc((n + 1) * v->n * sizeof (float));
 
-            for (size_t i = 0; i < v->true_n; i++)
-                (kp->kernel_matrix)[n * v->true_n + i] = v->data[i];
+            for (size_t i = 0; i < v->n; i++)
+                (kp->kernel_matrix)[n * v->n + i] = v->data[i];
 
             kp->alpha = (float*) mkl_64bytes_malloc((n + 1) * sizeof (float));
             kp->beta = (float*) mkl_64bytes_malloc((n + 1) * sizeof (float));
             (kp->alpha)[n] = inc;
             (kp->beta)[n] = inc * kp->c;
         } else {
-            check(kp->N == v->true_n, "%lu dimensional embedding does not confirm with the previous embedding size (%lu)", v->true_n, kp->N);
+            check(kp->N == v->n, "%lu dimensional embedding does not confirm with the previous embedding size (%lu)", v->n, kp->N);
 
-            kp->kernel_matrix = (float*) mkl_64bytes_realloc(kp->kernel_matrix, (n + 1) * v->true_n * sizeof (float));
+            kp->kernel_matrix = (float*) mkl_64bytes_realloc(kp->kernel_matrix, (n + 1) * v->n * sizeof (float));
 
-            for (size_t i = 0; i < v->true_n; i++)
-                (kp->kernel_matrix)[n * v->true_n + i] = v->data[i];
+            for (size_t i = 0; i < v->n; i++)
+                (kp->kernel_matrix)[n * v->n + i] = v->data[i];
 
             kp->alpha = (float*) mkl_64bytes_realloc(kp->alpha, (n + 1) * sizeof (float));
             kp->beta = (float*) mkl_64bytes_realloc(kp->beta, (n + 1) * sizeof (float));
@@ -486,23 +487,31 @@ void dump_conll_word(Word w, bool true_parent, FILE* ofp) {
     for (int i = 0; i < 10; i++) {
 
         if (i != 6)
-            fprintf(ofp,"%s", (char*) DArray_get(w->conll_piece, i));
+            fprintf(ofp, "%s", (char*) DArray_get(w->conll_piece, i));
         else {
             if (true_parent)
-                fprintf(ofp,"%d", w->parent);
+                fprintf(ofp, "%d", w->parent);
             else
-                fprintf(ofp,"%d", w->predicted_parent);
+                fprintf(ofp, "%d", w->predicted_parent);
         }
 
         if (i < 9)
-            fprintf(ofp,"\t");
+            fprintf(ofp, "\t");
     }
-    fprintf(ofp,"\n");
+    fprintf(ofp, "\n");
 
 }
 
-ParserTestMetric test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCorpus corpus, bool exclude_punct, FILE *gold_ofp, FILE *model_ofp) {
+ParserTestMetric test_KernelPerceptronModel(void *mdl, const CoNLLCorpus corpus, bool use_temp_weight, FILE *gold_ofp, FILE *model_ofp) {
     ParserTestMetric metric = create_ParserTestMetric();
+
+    PerceptronModel linear_mdl;
+    KernelPerceptron kernel_mdl;
+    if (kernel == KLINEAR) {
+        linear_mdl = (PerceptronModel) mdl;
+    } else {
+        kernel_mdl = (KernelPerceptron) mdl;
+    }
 
     for (int si = 0; si < DArray_count(corpus->sentences); si++) {
         FeaturedSentence sent = DArray_get(corpus->sentences, si);
@@ -512,8 +521,20 @@ ParserTestMetric test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCor
         debug("Generating feature matrix for sentence %d", si);
         set_FeatureMatrix(NULL, corpus, si);
 
-        debug("Generating adj. matrix for sentence %d", si);
-        set_adjacency_matrix_fast(corpus, si, mdl, true);
+        if (kernel == KLINEAR) {
+            if (use_temp_weight) {
+                debug("\tI will be using a weight vector (raw) of length %ld", linear_mdl->embedding_w_temp->n);
+                build_adjacency_matrix(corpus, si, linear_mdl->embedding_w_temp, NULL);
+            } else {
+                debug("\tI will be using a weight vector (averaged) of length %ld", linear_mdl->embedding_w->n);
+                build_adjacency_matrix(corpus, si, linear_mdl->embedding_w, NULL);
+            }
+
+        } else {
+            debug("Generating adj. matrix for sentence %d", si);
+            set_adjacency_matrix_fast(corpus, si, kernel_mdl, true);
+        }
+
 
         debug("Now parsing sentence %d", si);
         int *model = parse(sent);
@@ -535,7 +556,7 @@ ParserTestMetric test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCor
             if (w->parent == 0 && model[j + 1] == 0)
                 (metric->true_root_predicted)++;
 
-            debug("\tTrue parent of word %d (with %s:%s) is %d whereas estimated parent is %d", j+1, w->postag, w->form, w->parent, model[j + 1]);
+            debug("\tTrue parent of word %d (with %s:%s) is %d whereas estimated parent is %d", j + 1, w->postag, w->form, w->parent, model[j + 1]);
 
             int pmatch_nopunc = 0, ptotal_nopunc = 0, pmatch = 0;
             if (strcmp(w->postag, ",") != 0 && strcmp(w->postag, ":") != 0 && strcmp(w->postag, ".") != 0 && strcmp(w->postag, "``") != 0 && strcmp(w->postag, "''") != 0) {
@@ -580,8 +601,6 @@ ParserTestMetric test_KernelPerceptronModel(KernelPerceptron mdl, const CoNLLCor
         debug("Releasing feature matrix for sentence %d", si);
 
         free_feature_matrix(corpus, si);
-
-
     }
 
     return metric;
@@ -639,6 +658,45 @@ void dump_KernelPerceptronModel(FILE *fp, KernelPerceptron kp) {
     for (size_t i = 0; i < kp->best_m * kp->N; i++) {
         fprintf(fp, "K[%lu]=%f\n", i, (kp->best_kernel_matrix)[i]);
     }
+}
+
+PerceptronModel load_PerceptronModel(FILE *fp){
+    
+    size_t dummy;
+    char buffer[1024];
+    
+    int n = fscanf(fp, "edimension=%lu\n",&dummy);
+    check(n == 1,"Embedding dimension can not read");
+    
+     n = fscanf(fp, "epattern=%s\n",buffer);
+    check(n == 1,"Embedding pattern can not read");
+    
+     n = fscanf(fp, "bestnumit=%lu\n",&dummy);
+    check(n == 1,"Best numit can not read");
+    
+     n = fscanf(fp, "transformation=%s\n",buffer);
+    check(n == 1,"Embedding transformation can not read");
+    
+     n = fscanf(fp, "dimension=%lu\n",&dummy);
+    check(n == 1,"Transformed embedding dimension can not read");
+    
+    PerceptronModel model = create_PerceptronModel(dummy, NULL);
+    
+    size_t real_idx;
+    for (size_t i = 0; i < dummy; i++) {
+        n = fscanf(fp, "%lu=%f\n", &real_idx, &((model->embedding_w->data)[i]));
+
+        check(n == 2, "Either index (%lu) or coefficient(%f) is missing", real_idx, (model->embedding_w->data)[i]);
+        check(i == real_idx, "Expected index (%lu) does not match with current index(%lu)", i, real_idx);
+
+        (model->embedding_w_avg->data)[i] = (model->embedding_w->data)[i];
+        (model->embedding_w_best->data)[i] = (model->embedding_w->data)[i];
+        (model->embedding_w_temp->data)[i] = (model->embedding_w->data)[i];
+    }
+    
+    return model;
+error:
+    return NULL;
 }
 
 KernelPerceptron load_KernelPerceptronModel(FILE *fp) {

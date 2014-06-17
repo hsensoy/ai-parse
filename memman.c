@@ -10,22 +10,6 @@
 #include "debug.h"
 #include "mkl.h"
 
-size_t aligned_size(size_t n) {
-    return ((n / 32) + 1) * 32;
-}
-
-float* alloc_aligned(size_t n) {
-    float *buffer;
-
-    buffer = calloc(n, sizeof (float));
-    check_mem(buffer);
-
-    return buffer;
-
-error:
-    exit(1);
-}
-
 void* mkl_64bytes_malloc(size_t bytes) {
     void *buffer = mkl_malloc(bytes, 64);
 
