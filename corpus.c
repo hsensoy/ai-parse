@@ -84,6 +84,8 @@ DArray* get_embedding_pattern_parts() {
                 } else if (strcmp(pattern, "rbf") == 0) { // Right Boundary Flag
                     ep->node = 'b';
                     ep->subnode = 'r';
+                } else if (strcmp(pattern, "dir") == 0) { // Direction
+                    ep->node = 'd';
                 } else if (strcmp(pattern, "root") == 0) { // Root Flag
                     ep->node = 'r';
                 } else {
@@ -96,7 +98,7 @@ DArray* get_embedding_pattern_parts() {
 
                 DArray_push(embedding_pattern_parts, ep);
             }
-            
+
             debug("Number of embedding patterns is %d", DArray_count(embedding_pattern_parts));
 
         } else {
@@ -181,11 +183,13 @@ CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embed
         else if (pattern->node == 'l' && (pattern->subnode == 'r' || pattern->subnode == 'n'))
             embedding_concat_length += 1;
         else if (pattern->node == 'l' && pattern->subnode == 't')
-            embedding_concat_length += 6;
+            embedding_concat_length += 9;
         else if (pattern->node == 'b')
             embedding_concat_length += 2;
         else if (pattern->node == 'r')
             embedding_concat_length += 1;
+        else if (pattern->node == 'd')
+            embedding_concat_length += 2;
     }
 
     // Be optimistic about LINEAR transformation
@@ -362,10 +366,10 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
         } else if (pattern->node == 'l') {
 
             if (pattern->subnode == 't') {
-                vector length_v = vector_create(6);
-                int threshold_arr[] = {2, 5, 10, 20, 30, 40};
+                vector length_v = vector_create(9);
+                int threshold_arr[] = {1, 2, 3, 4, 5, 10, 20, 30, 40};
 
-                for (int i = 0; i < 6; i++)
+                for (int i = 0; i < 9; i++)
                     if (abs(from - to) > threshold_arr[i])
                         length_v->data[i] = 1;
                     else
@@ -439,6 +443,22 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
             bigvector = vconcat(bigvector, boundary_v);
 
             vector_free(boundary_v);
+        } else if (pattern->node == 'd') {
+
+            vector direction_v = vector_create(2);
+            if (from < to) {
+                direction_v->data[0] = 1;
+                direction_v->data[1] = 0;
+            }
+            else {
+                direction_v->data[0] = 0;
+                direction_v->data[1] = 1;
+            }
+
+
+            bigvector = vconcat(bigvector, direction_v);
+
+            vector_free(direction_v);
         }
     }
 
