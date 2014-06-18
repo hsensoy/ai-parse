@@ -135,13 +135,20 @@ Refer to `scripts/enrich.py` to create clones of original ConLL directory enrich
 * `p<N>v`: Refers to word embedding at position `i_p + <N>`. For example `p0v` refers to embedding for parent word itself, whereas `p-1v` refers to left context word of parent word given that `p != 1`, for which embedding is defined to be `0` vector. Just like left context (`p-1v`), right context (`p1v`) of a parent is a `0` vector given that parent word is the last word of the sentence.
 * `c<N>v`: Refers to word embedding at position `i_c + <N>`. For example `c0v` refers to embedding for child word itself, whereas `c-1v` refers to left context word of child word given that `c != 1`, for which embedding is defined to be `0` vector. Just like left context (`c-1v`), right context (`c1v`) of a child is a `0` vector given that child word is the last word of the sentence.
 * `tl`: Refers to _thresholded length_ defining 6 binary features for the number of words between parent and child (another way of saying absolute length between parent and child). Those are
+	* `1 if length > 1 else 0` 
 	* `1 if length > 2 else 0`
+	* `1 if length > 3 else 0`
+	* `1 if length > 4 else 0`
 	* `1 if length > 5 else 0`
 	* `1 if length > 10 else 0`
 	* `1 if length > 20 else 0`
 	* `1 if length > 30 else 0`
 	* `1 if length > 40 else 0`
 * `rl`: Refers to _raw length_ defining the number of words between parent and child as a continuos value.
+* `lbf`: Refers to _left boundary flag_ defining two bits (one for child/modifier and one for parent/head) indicating whether the node (either child or parent) is the first word of a given sentence.
+* `rbf`: Refers to _right boundary flag_ defining two bits (one for child/modifier and one for parent/head) indicating whether the node (either child or parent) is the last word of a given sentence.
+* `dir`: Direction of the arc represented as two exclusive bits internally. `10` for left to  right and `01` for right to left.
+* `root`: `ROOT` indicator flag. Set to be `1` if parent if `ROOT` `0` otherwise.
 
 `-l` is used to set expected number of dimensions in word embeddings given in enriched CoNLL corpus. For example, this is 25 for majority of SCODE type based embeddings and 50 for majority of SCODE token based embeddings.
 
