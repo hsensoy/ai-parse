@@ -149,6 +149,9 @@ Refer to `scripts/enrich.py` to create clones of original ConLL directory enrich
 * `rbf`: Refers to _right boundary flag_ defining two bits (one for child/modifier and one for parent/head) indicating whether the node (either child or parent) is the last word of a given sentence.
 * `dir`: Direction of the arc represented as two exclusive bits internally. `10` for left to  right and `01` for right to left.
 * `root`: `ROOT` indicator flag. Set to be `1` if parent if `ROOT` `0` otherwise.
+* `between`: Average embedding vector of length `--edimension`. 
+	* Element-wise average of embedding vectors if `min(parent, child) + 1 < max(parent,child)` (if there are at least on word between two).
+	* `0` vector of length `--edimension` otherwise.
 
 `-l` is used to set expected number of dimensions in word embeddings given in enriched CoNLL corpus. For example, this is 25 for majority of SCODE type based embeddings and 50 for majority of SCODE token based embeddings.
 

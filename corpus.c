@@ -381,7 +381,7 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
                 
             //log_info("Initialization is done");
 
-            if (abs(from - to) > 1 && from != 0) {
+            if (abs(from - to) > 1) {
 
                 int n = 0;
 
