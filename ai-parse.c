@@ -44,6 +44,7 @@ size_t budget_target = 50000;
 int polynomial_degree = 4;
 float bias = 1.0;
 float rbf_lambda = 0.025;
+int edimension = 0;
 
 int verbosity = 0;
 
@@ -54,7 +55,6 @@ int main(int argc, char** argv) {
 
 
     int maxnumit = 0;
-    int edimension = 0;
     int maxrec = -1;
 
     const char *budget_type_str = NULL;

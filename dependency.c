@@ -603,7 +603,7 @@ PerceptronModel create_PerceptronModel(size_t transformed_embedding_length, Inte
 
     PerceptronModel model = (PerceptronModel) malloc(sizeof (struct PerceptronModel));
     check_mem(model);
-    
+
     model->embedding_w = NULL;
     model->discrete_w = NULL;
 
@@ -692,6 +692,49 @@ void printfembedding(FeatureVector **mat, size_t n) {
     }
 }
 
+struct Rate {
+    double t_begin;
+    double t_end;
+
+    double total_elapsed;
+
+    int count;
+};
+
+typedef struct Rate* Rate;
+
+Rate parser_rate = NULL;
+
+Rate start(Rate *r) {
+
+    if (*r == NULL) {
+        *r = (Rate) malloc(sizeof (struct Rate));
+        (*r)->count = 0;
+        (*r)->total_elapsed = 0.0;
+        check(r != NULL, "Memory allocation error");
+    }
+
+    (*r)->t_begin = dsecnd();
+    (*r)->t_end = -1;
+
+    return *r;
+
+error:
+    exit(1);
+
+}
+
+void stop(Rate *r) {
+
+    (*r)->t_end = dsecnd();
+    (*r)->total_elapsed += ((*r)->t_end - (*r)->t_begin);
+    ((*r)->count)++;
+
+    if (((*r)->count) % 1000 == 1) {
+        log_info("Parser Rate is %lf sentences/sec", ((*r)->count) / ((*r)->total_elapsed));
+    }
+}
+
 void train_once_PerceptronModel(PerceptronModel mdl, const CoNLLCorpus corpus, int max_rec) {
     long match = 0, total = 0;
     //size_t slen=0;
@@ -705,6 +748,7 @@ void train_once_PerceptronModel(PerceptronModel mdl, const CoNLLCorpus corpus, i
         FeaturedSentence sent = (FeaturedSentence) DArray_get(corpus->sentences, si);
 
 
+        start(&parser_rate);
         debug("Building feature matrix for sentence %d of length %d", si, sent->length);
         set_FeatureMatrix(NULL, corpus, si);
 
@@ -720,6 +764,7 @@ void train_once_PerceptronModel(PerceptronModel mdl, const CoNLLCorpus corpus, i
 
 
         int *model = parse(sent);
+        stop(&parser_rate);
         debug("Parsing sentence %d is done", si);
         int *empirical = get_parents(sent);
 
@@ -965,11 +1010,11 @@ void printParserTestMetric(ParserTestMetric metric) {
 
     log_info("\t Parent prediction accuracy: %f(%d out of %d)", (metric->all->true_prediction)*1. / (metric->all->total_prediction), metric->all->true_prediction, metric->all->total_prediction);
     log_info("\t Parent prediction accuracy (punctuations excluded): %f(%d out of %d)", (metric->without_punc->true_prediction)*1. / (metric->without_punc->total_prediction), metric->without_punc->true_prediction, metric->without_punc->total_prediction);
-    
-    log_info("\t ROOT Prediction accuracy: %f (%d out of %d)",(metric->true_root_predicted*1.)/metric->total_sentence, metric->true_root_predicted,metric->total_sentence );
-    
-    log_info("\t Complete sentence: %f (%d out of %d)", (metric->complete_sentence*1.)/metric->total_sentence,metric->complete_sentence,metric->total_sentence);
-    log_info("\t Complete sentence (punctuations excluded): %f (%d out of %d)", (metric->complete_sentence_without_punc*1.)/metric->total_sentence,metric->complete_sentence_without_punc,metric->total_sentence);
+
+    log_info("\t ROOT Prediction accuracy: %f (%d out of %d)", (metric->true_root_predicted * 1.) / metric->total_sentence, metric->true_root_predicted, metric->total_sentence);
+
+    log_info("\t Complete sentence: %f (%d out of %d)", (metric->complete_sentence * 1.) / metric->total_sentence, metric->complete_sentence, metric->total_sentence);
+    log_info("\t Complete sentence (punctuations excluded): %f (%d out of %d)", (metric->complete_sentence_without_punc * 1.) / metric->total_sentence, metric->complete_sentence_without_punc, metric->total_sentence);
 }
 
 void mark_best_PerceptronModel(PerceptronModel model, int numit) {
