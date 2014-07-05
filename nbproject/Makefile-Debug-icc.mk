@@ -52,7 +52,7 @@ OBJECTFILES= \
 
 
 # C Compiler Flags
-CFLAGS=-std=gnu99 -DMKL_ILP64 -openmp -I/opt/intel/include -mkl -O0 -parallel -vec-report4 -par-report3 -debug
+CFLAGS=-std=gnu99 -DMKL_ILP64 -I/opt/intel/include -mkl -O3 -parallel -vec-report4 -par-report3 -debug
 
 # CC Compiler Flags
 CCFLAGS=

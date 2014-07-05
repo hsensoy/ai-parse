@@ -55,6 +55,20 @@ error:
     exit(1);
 }
 
+void vector_resize(vector *v, size_t new_n) {
+    
+            
+    (*v)->data = mkl_64bytes_realloc((*v)->data, new_n * sizeof(float));
+    check_mem((*v)->data);
+    
+    (*v)->n  = new_n;
+    
+    return;
+
+error:
+    exit(1);
+}
+
 void vector_free(vector v) {
     if (v != NULL) {
         mkl_free(v->data);
@@ -82,14 +96,12 @@ vector vconcat(vector target, const vector v) {
 
         memcpy(target->data, v->data, sizeof (float) * (v->n));
     } else {
-        vector temp = target;
+        size_t init_size = target->n;
+        
+        vector_resize(&target,v->n + target->n);
 
-        target = vector_create(v->n + target->n);
+        memcpy(target->data + init_size, v->data, sizeof (float) * v->n);
 
-        memcpy(target->data, temp->data, sizeof (float) * temp->n);
-        memcpy(target->data + temp->n, v->data, sizeof (float) * v->n);
-
-        vector_free(temp);
     }
 
     return target;
@@ -123,7 +135,7 @@ float vdot(vector v1, vector v2) {
 
 void vdiv(vector v, int div) {
 
-    for (int i = 0; i < v->n; i++) {
+    for (size_t i = 0; i < v->n; i++) {
         (v->data)[i] /= div;
     }
 }

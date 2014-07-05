@@ -21,6 +21,9 @@
 #include <sys/types.h>
 #endif
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
 Word Root = NULL;
 
 size_t max_num_sv = 0;
@@ -41,6 +44,7 @@ FeatureMatrix feature_matrix_singleton = NULL;
 extern const char *epattern;
 extern enum EmbeddingTranformation etransform;
 extern float rbf_lambda;
+extern int edimension;
 
 
 DArray* embedding_pattern_parts = NULL;
@@ -88,6 +92,8 @@ DArray* get_embedding_pattern_parts() {
                     ep->node = 'd';
                 } else if (strcmp(pattern, "root") == 0) { // Root Flag
                     ep->node = 'r';
+                } else if (strcmp(pattern, "between") == 0) { //Between words
+                    ep->node = 'w';
                 } else {
 
                     int n = sscanf(pattern, "%c%dv", &(ep->node), &(ep->offset));
@@ -178,7 +184,7 @@ CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embed
     for (int pi = 0; pi < DArray_count(get_embedding_pattern_parts()); pi++) {
         EmbeddingPattern pattern = (EmbeddingPattern) DArray_get(get_embedding_pattern_parts(), pi);
 
-        if (pattern->node == 'p' || pattern->node == 'c')
+        if (pattern->node == 'p' || pattern->node == 'c' || pattern->node == 'w')
             embedding_concat_length += embedding_dimension;
         else if (pattern->node == 'l' && (pattern->subnode == 'r' || pattern->subnode == 'n'))
             embedding_concat_length += 1;
@@ -363,6 +369,44 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
             } else {
                 bigvector = vconcat(bigvector, Root->embedding);
             }
+
+
+        } else if (pattern->node == 'w') {
+
+            //log_info("Embedding dimension %d",edimension);
+            vector avg_v = vector_create(edimension);
+            
+            for(size_t i = 0 ;i < avg_v->n;i++)
+                (avg_v->data)[i] = 0.0;
+                
+            //log_info("Initialization is done");
+
+            if (abs(from - to) > 1) {
+
+                int n = 0;
+
+                for (int b = MIN(from, to)+1 ; b < MAX(from, to); b++) {
+                    
+                    
+                    //log_info("from=%d, to=%d, b=%d",MIN(from, to),MAX(from, to), b);
+                    vector b_vec = ((Word) DArray_get(sent->words, b-1))->embedding;
+
+                    for (size_t bi = 0; bi < b_vec->n; bi++)
+                        (avg_v->data)[bi] += (b_vec->data)[bi];
+
+                    
+                    n++;
+                }
+
+                for (size_t bi = 0; bi < avg_v->n; bi++)
+                    (avg_v->data)[bi] /= n;
+
+            }
+
+
+            bigvector = vconcat(bigvector, avg_v);
+            vector_free(avg_v);
+
         } else if (pattern->node == 'l') {
 
             if (pattern->subnode == 't') {
@@ -449,8 +493,7 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
             if (from < to) {
                 direction_v->data[0] = 1;
                 direction_v->data[1] = 0;
-            }
-            else {
+            } else {
                 direction_v->data[0] = 0;
                 direction_v->data[1] = 1;
             }
@@ -645,9 +688,9 @@ void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerce
         }
 
         if (kp->kernel == KPOLYNOMIAL) {
-#pragma vector nontemporal (C, r)
-#pragma loop_count min(3000), max(640000000), avg(1000000)
-#pragma ivdep
+            #pragma vector nontemporal (C, r)
+            #pragma loop_count min(30000), max(640000000), avg(1000000)
+            #pragma ivdep
             for (size_t i = 0; i < num_sv * narc; i++) {
                 C[i] = kp->bias;
                 //r[i] = 0.;
