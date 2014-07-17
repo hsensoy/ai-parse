@@ -64,6 +64,7 @@ int main(int argc, char** argv) {
     const char *path = NULL;
     const char * etransform_str = NULL;
     const char *kernel_str = NULL;
+    const char *rbf_lambda_str = NULL;
 
 #ifdef NDEBUG
     log_info("ai-parse %s (Release)", VERSION);
@@ -89,7 +90,7 @@ int main(int argc, char** argv) {
         OPT_INTEGER('a', "bias", &bias, "Polynomial kernel additive term. Default is 1", NULL),
         OPT_INTEGER('c', "concurrency", &num_parallel_mkl_slaves, "Parallel MKL Slaves. Default is 90% of all machine cores", NULL),
         OPT_INTEGER('b', "degree", &polynomial_degree, "Degree of polynomial kernel. Default is 4", NULL),
-        OPT_STRING('z', "lambda", &rbf_lambda, "Lambda multiplier for RBF Kernel.Default value is 0.025"),
+        OPT_STRING('z', "lambda", &rbf_lambda_str, "Lambda multiplier for RBF Kernel.Default value is 0.025"),
         OPT_STRING('u', "budget_type", &budget_type_str, "Budget control methods. NONE|RANDOM", NULL),
         OPT_INTEGER('g', "budget_size", &budget_target, "Budget Target for budget based perceptron algorithms. Default 50K", NULL),
         OPT_END(),
@@ -98,6 +99,7 @@ int main(int argc, char** argv) {
     argparse_init(&argparse, options, usage, 0);
     argc = argparse_parse(&argparse, argc, argv);
 
+    
     if (num_parallel_mkl_slaves == -1) {
         int max_threads = mkl_get_max_threads();
         log_info("There are %d cores on machine", max_threads);
@@ -180,6 +182,10 @@ int main(int argc, char** argv) {
 
             kernel = KPOLYNOMIAL;
         } else if (strcmp(kernel_str, "GAUSSIAN") == 0 || strcmp(kernel_str, "RBF") == 0) {
+
+            if (rbf_lambda_str != NULL ) {
+                rbf_lambda = (float) atof(rbf_lambda_str);
+            }
 
             log_info("RBF/GAUSSIAN kernel will be used with lambda %f ", rbf_lambda);
 
