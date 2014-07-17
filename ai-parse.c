@@ -14,7 +14,7 @@
 #include "mkl.h"
 #include <string.h>
 
-#define VERSION "v0.9.8.2 (John Adams)"
+#define VERSION "v0.9.8.3 (John Adams)"
 
 
 #define DEFAULT_MAX_NUMIT 50
