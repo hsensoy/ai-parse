@@ -516,10 +516,12 @@ ParserTestMetric test_KernelPerceptronModel(void *mdl, const CoNLLCorpus corpus,
     for (int si = 0; si < DArray_count(corpus->sentences); si++) {
         FeaturedSentence sent = DArray_get(corpus->sentences, si);
 
-        log_info("Test sentence %d (section %d) of length %d", si, sent->section, sent->length);
+        debug("Test sentence %d (section %d) of length %d", si, sent->section, sent->length);
 
-        debug("Generating feature matrix for sentence %d", si);
-        set_FeatureMatrix(NULL, corpus, si);
+        if (kernel != KLINEAR) {
+                debug("Generating feature matrix for sentence %d", si);
+                set_FeatureMatrix(NULL, corpus, si);
+        }
 
         if (kernel == KLINEAR) {
             if (use_temp_weight) {

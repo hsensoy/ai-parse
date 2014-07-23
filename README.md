@@ -157,11 +157,11 @@ Refer to `scripts/enrich.py` to create clones of original ConLL directory enrich
 
 `-m` is used to restrict number of training instances to be used for _optimize_ and _train_. Only first `-m` instances will be used from the sections given by `-t` option. This option defined to perform experiments to see the effect of training instances used over development set accuracy.
 
-`-x` is used to define basis function to be used by the parser. Don't use this option today. This defined for future requirements. Either `LINEAR` (default) or `QUADRATIC`.
+`-x` is used to define basis function to be used by the parser. Don't use this option today. This defined for future requirements. Either `LINEAR` (default), `QUADRATIC` or `CUBIC`.
 
 `-c` is used to define concurrency to be used in parsing (Used by MKL routines. Intel auto parallelism uses 8-way parallelism on Linux 2-way parallelism on MacOS)
 
-`-k` is used to define kernel function. Either `LINEAR` (default) or `POLYNOMIAL`.
+`-k` is used to define kernel function. Either `LINEAR` (default), `POLYNOMIAL`, or `RBF/GAUSSIAN`.
 
 `-a` is the bias parameter for `POLYNOMIAL` kernel.
 

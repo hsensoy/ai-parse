@@ -51,6 +51,7 @@ FeatureMatrix FeatureMatrix_create(int sent_length, uint32_t embedding_length, b
 
 
 enum EmbeddingTranformation{
+    CUBIC,
     QUADRATIC,
     LINEAR
 };
