@@ -17,6 +17,7 @@
 #include <string.h>
 
 #define GAMMA 0.5
+#define PARSER_RATE_VERBOSITY 250       // Log parser rate in every PARSER_RATE_VERBOSITY sentences.
 
 /**
  * ai-parse.c file for actual storage allocation for those two variables
@@ -25,85 +26,10 @@ extern const char *epattern;
 extern enum EmbeddingTranformation etransform;
 extern enum Kernel kernel;
 
-/*
-float rbf(const float *v1, const float *v2, size_t  n){
-    float result = 0.0;
-    
-    for (int i = 0; i < n; i++) {
-        float delta = v1[i] - v2[i];
-        result += delta * delta;
-    }
-    
-    return exp(-GAMMA * result);
-}*/
+extern vector xformed_v;
 
 #define KERNEL vdot
 #define GET_CONTINOUS_VECTOR big_vector
-
-float* big_vector(int from, int to, FeaturedSentence sentence) {
-    return NULL;
-}
-
-/*
-float* big_vector( int from, int to, FeaturedSentence sentence ){
-    float *vect = NULL;
-    float *scode=NULL;
-    
-    if (from != to && to != 0){
-        size_t slen = sentence->scode_length;
-        
-        vect = alloc_aligned(aligned_size(slen * NUM_SCODE_FEATURES));    // p-1 p p+1 c-1 c c+1 and combinations of them
-
-        if (from != 0){
-            scode = (float*)DArray_get(sentence->scode, from-1);
-            
-            if (scode != NULL)
-                memcpy(vect, scode, sizeof(float) * slen);
-        }
-        
-        scode = (float*)DArray_get(sentence->scode, from);
-        
-        if (scode != NULL)
-            memcpy(vect + slen, scode, sizeof(float) * slen);
-            
-        
-        if (from != sentence->length - 1 && from != 0){
-            scode = (float*)DArray_get(sentence->scode, from+1);
-            
-            if (scode != NULL)
-                memcpy(vect + 2 * slen, scode, sizeof(float) * slen);
-        }
-        
-        if (to != 0){
-            scode = (float*)DArray_get(sentence->scode, to-1);
-            
-            if (scode != NULL)
-                memcpy(vect + 3 * slen, scode, sizeof(float) * slen);
-        }
-        
-        scode = (float*)DArray_get(sentence->scode, to);
-        
-        if (scode != NULL)
-            memcpy(vect + 4 * slen, scode , sizeof(float) * slen);
-        
-        if (to != sentence->length - 1){
-            scode = (float*)DArray_get(sentence->scode, to+1);
-            
-            if (scode != NULL)
-                memcpy(vect + 5 * slen, scode, sizeof(float) * slen);
-        }
-    }
-    
-    
-    return vect;
-    
-error:
-    exit(1);
-}
- */
-
-
-
 
 FeatureValue FeatureValue_create(uint32_t fid) {
 
@@ -730,7 +656,7 @@ void stop(Rate *r) {
     (*r)->total_elapsed += ((*r)->t_end - (*r)->t_begin);
     ((*r)->count)++;
 
-    if (((*r)->count) % 1000 == 1) {
+    if (((*r)->count) % PARSER_RATE_VERBOSITY == 0 && ((*r)->count) > 0) {
         log_info("Parser Rate is %lf sentences/sec", ((*r)->count) / ((*r)->total_elapsed));
     }
 }
@@ -739,9 +665,6 @@ void train_once_PerceptronModel(PerceptronModel mdl, const CoNLLCorpus corpus, i
     long match = 0, total = 0;
     //size_t slen=0;
 
-    double s_initial = dsecnd();
-
-
     log_info("Total number of training instances %d", (max_rec == -1) ? DArray_count(corpus->sentences) : max_rec);
     for (int si = 0; si < ((max_rec == -1) ? DArray_count(corpus->sentences) : max_rec); si++) {
         //log_info("Parsing sentence %d/%d", si+1, DArray_count(corpus));
@@ -749,8 +672,8 @@ void train_once_PerceptronModel(PerceptronModel mdl, const CoNLLCorpus corpus, i
 
 
         start(&parser_rate);
-        debug("Building feature matrix for sentence %d of length %d", si, sent->length);
-        set_FeatureMatrix(NULL, corpus, si);
+        //debug("Building feature matrix for sentence %d of length %d", si, sent->length);
+        //set_FeatureMatrix(NULL, corpus, si);
 
 
         //printfembedding(sent->feature_matrix, sent->length);
@@ -814,34 +737,22 @@ void train_once_PerceptronModel(PerceptronModel mdl, const CoNLLCorpus corpus, i
                 DArray_destroy(empirical_features);
             }
 
-
             for (int i = 1; i <= sent->length; i++) {
 
-                vector model_embedding = (sent->feature_matrix_ref->matrix_data[model[i]][i])->continous_v;
-                vector real_embedding = (sent->feature_matrix_ref->matrix_data[empirical[i]][i])->continous_v;
+                if (model[i] != empirical[i]){
+                    // -1 for Model arch
+                    embedding_feature(sent, model[i], i, xformed_v);
+                    vadd(mdl->embedding_w, xformed_v, -1.0);
+                    vadd(mdl->embedding_w_temp, xformed_v, -1.0);
+                    vadd(mdl->embedding_w_avg, xformed_v, -(mdl->c));
 
-                /*
-                debug("Increasing vector");
-                vprint(real_embedding);
-				
-                debug("Decreasing vector");
-                vprint(model_embedding);
-                 */
+                    // +1 for Gold arc
+                    embedding_feature(sent, empirical[i], i, xformed_v);
 
-                check(model_embedding != NULL && empirical != NULL, "model_embedding/real_embedding can not be NULL at this stage ?!?");
-
-                vadd(mdl->embedding_w, model_embedding, -1.0);
-                vadd(mdl->embedding_w, real_embedding, 1.0);
-
-                /*
-                debug("Weight vector");
-                vprint(mdl->embedding_w);
-                 */
-                vadd(mdl->embedding_w_temp, model_embedding, -1.0);
-                vadd(mdl->embedding_w_temp, real_embedding, 1.0);
-
-                vadd(mdl->embedding_w_avg, model_embedding, -(mdl->c));
-                vadd(mdl->embedding_w_avg, real_embedding, (mdl->c));
+                    vadd(mdl->embedding_w, xformed_v, 1.0);
+                    vadd(mdl->embedding_w_temp, xformed_v, 1.0);
+                    vadd(mdl->embedding_w_avg, xformed_v, (mdl->c));
+                }
 
                 //free(real_embedding);
                 //free(model_embedding);
@@ -855,10 +766,9 @@ void train_once_PerceptronModel(PerceptronModel mdl, const CoNLLCorpus corpus, i
         match += nm;
         total += (sent->length);
 
-        if (si % 1000 == 1) {
-            log_info("Running training accuracy %lf (Elapsed %.5f sec)", (match * 1.) / total, (dsecnd() - s_initial));
+        if (si % 1000 == 0 && si > 0) {
+            log_info("Running training accuracy %lf", (match * 1.) / total);
 
-            s_initial = dsecnd();
         }
 
 
@@ -888,10 +798,6 @@ void train_once_PerceptronModel(PerceptronModel mdl, const CoNLLCorpus corpus, i
     //    mdl->w = mdl->w_avg;
 
     //free_feature_matrix(sent);
-
-    return;
-error:
-    exit(1);
 }
 
 void dump_PerceptronModel(FILE *fp, int edimension, vector w, int best_numit) {

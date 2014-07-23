@@ -31,12 +31,8 @@ size_t max_narc = 0;
 
 float *C = NULL, *r = NULL, *y = NULL;
 
-
-
-/**
- * Single feature matrix across the parser at a time.
- */
-FeatureMatrix feature_matrix_singleton = NULL;
+vector xformed_v = NULL;
+vector bigvector = NULL;
 
 /**
  * ai-parse.c file for actual storage allocation for those two variables
@@ -180,7 +176,7 @@ CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embed
     corpus->word_embedding_dimension = embedding_dimension;
     corpus->transformed_embedding_length = -1;
 
-    int embedding_concat_length = 0;
+    int embedding_concat_length = 1;
     for (int pi = 0; pi < DArray_count(get_embedding_pattern_parts()); pi++) {
         EmbeddingPattern pattern = (EmbeddingPattern) DArray_get(get_embedding_pattern_parts(), pi);
 
@@ -199,15 +195,30 @@ CoNLLCorpus create_CoNLLCorpus(const char* base_dir, DArray *sections, int embed
     }
 
     // Be optimistic about LINEAR transformation
+    bigvector = vector_create(embedding_concat_length);
     corpus->transformed_embedding_length = embedding_concat_length;
     if (etransform == QUADRATIC)
-        corpus->transformed_embedding_length = ((corpus->transformed_embedding_length) * (corpus->transformed_embedding_length + 3)) / 2;
+        corpus->transformed_embedding_length = ((corpus->transformed_embedding_length) * (corpus->transformed_embedding_length + 1)) / 2;
+    else if (etransform == CUBIC) {
+        size_t emprical_xform_length = 0;
+        for (size_t i = 0; i < embedding_concat_length; i++) {
+            for (size_t j = 0; j <= i; j++) {
+                for (size_t k = 0; k <= j; k++) {
+                    emprical_xform_length++;
+                }
+            }
+        }
 
-    log_info("Corpus has an embedding length of %d (%ld with transformation)", embedding_dimension, corpus->transformed_embedding_length);
-
-    if (feature_matrix_singleton == NULL) {
-        feature_matrix_singleton = FeatureMatrix_create(MAX_SENT_LENGTH, corpus->transformed_embedding_length, false);
+        corpus->transformed_embedding_length = emprical_xform_length;
     }
+
+
+    xformed_v = vector_create(corpus->transformed_embedding_length);
+
+
+    log_info("Corpus has an embedding length of %d (%ld by %d transformation)", embedding_dimension, corpus->transformed_embedding_length, etransform);
+
+
 
     return corpus;
 error:
@@ -233,13 +244,7 @@ void free_CoNLLCorpus(CoNLLCorpus corpus, bool free_feature_matrix) {
 
     debug("Patterns are released");
 
-    if (feature_matrix_singleton != NULL && free_feature_matrix) {
-        free_featureMatrix(feature_matrix_singleton);
 
-        feature_matrix_singleton = NULL;
-    }
-
-    debug("Feature Matrix Singleton is released");
 }
 
 /**
@@ -344,8 +349,7 @@ void free_featureMatrix(FeatureMatrix matrix) {
  * @return 
  */
 vector embedding_feature(FeaturedSentence sent, int from, int to, vector target) {
-    vector bigvector = NULL;
-
+    bigvector->last_idx = 0;
     IS_ARC_VALID(from, to, sent->length);
 
     DArray* patterns = get_embedding_pattern_parts();
@@ -375,26 +379,26 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
 
             //log_info("Embedding dimension %d",edimension);
             vector avg_v = vector_create(edimension);
-            
-            for(size_t i = 0 ;i < avg_v->n;i++)
+
+            for (size_t i = 0; i < avg_v->n; i++)
                 (avg_v->data)[i] = 0.0;
-                
+
             //log_info("Initialization is done");
 
             if (abs(from - to) > 1) {
 
                 int n = 0;
 
-                for (int b = MIN(from, to)+1 ; b < MAX(from, to); b++) {
-                    
-                    
+                for (int b = MIN(from, to) + 1; b < MAX(from, to); b++) {
+
+
                     //log_info("from=%d, to=%d, b=%d",MIN(from, to),MAX(from, to), b);
-                    vector b_vec = ((Word) DArray_get(sent->words, b-1))->embedding;
+                    vector b_vec = ((Word) DArray_get(sent->words, b - 1))->embedding;
 
                     for (size_t bi = 0; bi < b_vec->n; bi++)
                         (avg_v->data)[bi] += (b_vec->data)[bi];
 
-                    
+
                     n++;
                 }
 
@@ -410,18 +414,17 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
         } else if (pattern->node == 'l') {
 
             if (pattern->subnode == 't') {
-                vector length_v = vector_create(9);
-                int threshold_arr[] = {1, 2, 3, 4, 5, 10, 20, 30, 40};
+                const int threshold_arr[] = {1, 2, 3, 4, 5, 10, 20, 30, 40};
+                float threshold_flag[9];
 
                 for (int i = 0; i < 9; i++)
                     if (abs(from - to) > threshold_arr[i])
-                        length_v->data[i] = 1;
+                        threshold_flag[i] = 1;
                     else
-                        length_v->data[i] = 0;
+                        threshold_flag[i] = 0;
 
-                bigvector = vconcat(bigvector, length_v);
+                bigvector = vconcat_arr(bigvector, 9, threshold_flag);
 
-                vector_free(length_v);
             } else if (pattern->subnode == 'r') {
                 vector length_v = vector_create(1);
 
@@ -445,65 +448,62 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
 
         } else if (pattern->node == 'b') {
             if (pattern->subnode == 'l') {
-                vector boundary_v = vector_create(2);
-                boundary_v->data[0] = 0;
-                boundary_v->data[1] = 0;
+                float left_boundary[] = {0, 0};
+
+                left_boundary[0] = 0;
+                left_boundary[1] = 0;
+
 
                 if (from == 1)
-                    boundary_v->data[0] = 1;
+                    left_boundary[0] = 1;
 
                 if (to == 1)
-                    boundary_v->data[1] = 1;
+                    left_boundary[1] = 1;
 
 
-                bigvector = vconcat(bigvector, boundary_v);
+                bigvector = vconcat_arr(bigvector, 2, left_boundary);
 
-                vector_free(boundary_v);
             } else if (pattern->subnode == 'r') {
-                vector boundary_v = vector_create(2);
-                boundary_v->data[0] = 0;
-                boundary_v->data[1] = 0;
+                float right_boundary[] = {0, 0};
+
+                right_boundary[0] = 0;
+                right_boundary[1] = 0;
+
 
                 if (from == sent->length)
-                    boundary_v->data[0] = 1;
+                    right_boundary[0] = 1;
 
                 if (to == sent->length)
-                    boundary_v->data[1] = 1;
+                    right_boundary[1] = 1;
 
-
-                bigvector = vconcat(bigvector, boundary_v);
-
-                vector_free(boundary_v);
+                bigvector = vconcat_arr(bigvector, 2, right_boundary);
             }
         } else if (pattern->node == 'r') {
+            const float root_true[] = {1.};
+            const float root_false[] = {0.};
 
-            vector boundary_v = vector_create(1);
             if (from == 0)
-                boundary_v->data[0] = 1;
+                vconcat_arr(bigvector, 1, root_true);
             else
-                boundary_v->data[0] = 0;
+                vconcat_arr(bigvector, 1, root_false);
 
 
-            bigvector = vconcat(bigvector, boundary_v);
-
-            vector_free(boundary_v);
         } else if (pattern->node == 'd') {
+            const float left2right[] = {1., 0.};
+            const float right2left[] = {0., 1.};
 
-            vector direction_v = vector_create(2);
             if (from < to) {
-                direction_v->data[0] = 1;
-                direction_v->data[1] = 0;
+                vconcat_arr(bigvector, 2, left2right);
             } else {
-                direction_v->data[0] = 0;
-                direction_v->data[1] = 1;
+                vconcat_arr(bigvector, 2, right2left);
             }
-
-
-            bigvector = vconcat(bigvector, direction_v);
-
-            vector_free(direction_v);
         }
     }
+
+
+    // Add the bias term
+    const float bias[] = {1.};
+    bigvector = vconcat_arr(bigvector, 1, bias);
 
 
     switch (etransform) {
@@ -512,6 +512,9 @@ vector embedding_feature(FeaturedSentence sent, int from, int to, vector target)
             break;
         case QUADRATIC:
             return vquadratic(target, bigvector, 1);
+            break;
+        case CUBIC:
+            return vcubic(target, bigvector, target->n);
             break;
     }
 
@@ -527,18 +530,6 @@ void set_FeatureMatrix(Hashmap* featuremap, CoNLLCorpus corpus, int sentence_idx
 
     FeaturedSentence sentence = (FeaturedSentence) DArray_get(corpus->sentences, sentence_idx);
     int length = sentence->length;
-
-    if (feature_matrix_singleton->size < length + 1) {
-        log_info("REALLOC: Feature Matrix (singleton)");
-
-        free_featureMatrix(feature_matrix_singleton);
-
-        feature_matrix_singleton = FeatureMatrix_create(length, corpus->transformed_embedding_length, false);
-    }
-
-    sentence->feature_matrix_ref = feature_matrix_singleton;
-
-
 
     //check(corpus->feature_matrix_singleton->size >= length, "Singleton Matrix is too small (%d) for a sentence length of (%d). Fix and recompile the code", corpus->feature_matrix_singleton->size, length);
 
@@ -688,9 +679,9 @@ void set_adjacency_matrix_fast(CoNLLCorpus corpus, int sentence_idx, KernelPerce
         }
 
         if (kp->kernel == KPOLYNOMIAL) {
-            #pragma vector nontemporal (C, r)
-            #pragma loop_count min(30000), max(640000000), avg(1000000)
-            #pragma ivdep
+#pragma vector nontemporal (C, r)
+#pragma loop_count min(30000), max(640000000), avg(1000000)
+#pragma ivdep
             for (size_t i = 0; i < num_sv * narc; i++) {
                 C[i] = kp->bias;
                 //r[i] = 0.;
@@ -765,85 +756,6 @@ error:
     exit(1);
 }
 
-/*
-void set_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, KernelPerceptron kp) {
-
-    FeaturedSentence sentence = (FeaturedSentence) DArray_get(corpus->sentences, sentence_idx);
-    int length = sentence->length;
-
-    if (sentence->adjacency_matrix == NULL)
-        sentence->adjacency_matrix = square_adjacency_matrix(length + 1, NEGATIVE_INFINITY);
-
-    debug("%u x %u matrix", kp->M, kp->N);
-    float *y, *x, *r;
-    if (kp->M > 0) {
-        y = (float*) mkl_64bytes_malloc(kp->M * sizeof (float));
-        r = (float*) mkl_64bytes_malloc(kp->M * sizeof (float));
-        x = (float*) mkl_64bytes_malloc(kp->N * sizeof (float));
-    }
-    for (int _from = 0; _from <= length; _from++)
-        for (int _to = 1; _to <= length; _to++) {
-            if (_to != _from) {
-                (sentence->adjacency_matrix)[_from][_to] = 0.0;
-
-                if (corpus->hasembeddings) {
-
-                    debug("%d->%d\n", _from, _to);
-
-                    vector embedding = (sentence->feature_matrix_ref->matrix_data)[_from][_to]->continous_v;
-
-
-                    if (embedding == NULL) {
-                        log_err("NULL continuous vector");
-                        exit(EXIT_FAILURE);
-                    }
-
-
-                    switch (kp->kernel) {
-                        case KLINEAR:
-                            break;
-                        case KPOLYNOMIAL:
-
-                            if (kp->M > 0) {
-
-                                for (int i = 0; i < kp->M; i++) {
-                                    y[i] = kp->bias;
-                                    r[i] = 0;
-                                }
-
-                                for (int i = 0; i < kp->N; i++)
-                                    x[i] = (embedding->data)[i];
-
-                                cblas_sgemv(CblasRowMajor, CblasNoTrans, kp->M, kp->N, 1., kp->kernel_matrix, kp->N, x, 1, 1., y, 1);
-
-
-
-                                vsPowx(kp->M, y, kp->power, r);
-
-                                (sentence->adjacency_matrix)[_from][_to] = cblas_sdot(kp->M, r, 1, kp->alpha, 1);
-
-
-
-                            }
-
-                            break;
-                        default:
-                            break;
-
-
-                    }
-
-                }
-            }
-        }
-
-    if (kp->M > 0) {
-        mkl_free(y);
-        mkl_free(r);
-        mkl_free(x);
-    }
-}
- */
 void build_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, vector embeddings_w, vector discrete_w) {
 
     FeaturedSentence sentence = (FeaturedSentence) DArray_get(corpus->sentences, sentence_idx);
@@ -865,15 +777,15 @@ void build_adjacency_matrix(CoNLLCorpus corpus, int sentence_idx, vector embeddi
                 if (corpus->hasembeddings) {
 
                     //debug("%d->%d\n", _from, _to);
-                    vector embedding = (sentence->feature_matrix_ref->matrix_data)[_from][_to]->continous_v;
+                    xformed_v = embedding_feature(sentence, _from, _to, xformed_v);
 
-                    if (embedding == NULL) {
+                    if (xformed_v == NULL) {
                         log_err("NULL continous vector");
                         exit(EXIT_FAILURE);
                     }
 
                     //vprint(embedding);
-                    (sentence->adjacency_matrix)[_from][_to] += vdot(embeddings_w, embedding);
+                    (sentence->adjacency_matrix)[_from][_to] += vdot(embeddings_w, xformed_v);
 
                 }
 

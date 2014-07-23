@@ -99,10 +99,10 @@ int main(int argc, char** argv) {
     argparse_init(&argparse, options, usage, 0);
     argc = argparse_parse(&argparse, argc, argv);
 
-    
+    int max_threads = mkl_get_max_threads();
+    log_info("There are max %d MKL threads", max_threads);
+
     if (num_parallel_mkl_slaves == -1) {
-        int max_threads = mkl_get_max_threads();
-        log_info("There are %d cores on machine", max_threads);
 
         num_parallel_mkl_slaves = (int) (max_threads * 0.9);
 
@@ -113,6 +113,11 @@ int main(int argc, char** argv) {
 
     log_info("Number of MKL Slaves is set to be %d", num_parallel_mkl_slaves);
     mkl_set_num_threads(num_parallel_mkl_slaves);
+
+    if (1 == mkl_get_dynamic())
+        log_info("Intel MKL may use less than %i threads for a large problem", num_parallel_mkl_slaves);
+    else
+        log_info("Intel MKL should use %i threads for a large problem", num_parallel_mkl_slaves);
 
     check(stage != NULL && (strcmp(stage, "optimize") == 0 || strcmp(stage, "train") == 0 || strcmp(stage, "parse") == 0),
             "Choose one of -s optimize, train, parse");
@@ -147,7 +152,7 @@ int main(int argc, char** argv) {
     }
 
     if (dev == NULL && (strcmp(stage, "optimize") == 0 || strcmp(stage, "train") == 0)) {
-        log_warn("development section string is set to %s", DEFAULT_DEV_SECTION_STR);
+        log_info("development section string is set to %s", DEFAULT_DEV_SECTION_STR);
 
         dev = strdup(DEFAULT_DEV_SECTION_STR);
     }
@@ -162,6 +167,8 @@ int main(int argc, char** argv) {
         etransform = LINEAR;
     } else if (strcmp(etransform_str, "QUADRATIC") == 0) {
         etransform = QUADRATIC;
+    } else if (strcmp(etransform_str, "CUBIC") == 0) {
+        etransform = CUBIC;
     } else {
         log_err("Unsupported transformation type for embedding %s", etransform_str);
     }
@@ -169,7 +176,7 @@ int main(int argc, char** argv) {
     if (strcmp(stage, "optimize") == 0 || strcmp(stage, "train") == 0) {
 
         if (maxnumit <= 0) {
-            log_warn("maxnumit is set to %d", DEFAULT_MAX_NUMIT);
+            log_info("maxnumit is set to %d", DEFAULT_MAX_NUMIT);
 
             maxnumit = DEFAULT_MAX_NUMIT;
         }
@@ -183,7 +190,7 @@ int main(int argc, char** argv) {
             kernel = KPOLYNOMIAL;
         } else if (strcmp(kernel_str, "GAUSSIAN") == 0 || strcmp(kernel_str, "RBF") == 0) {
 
-            if (rbf_lambda_str != NULL ) {
+            if (rbf_lambda_str != NULL) {
                 rbf_lambda = (float) atof(rbf_lambda_str);
             }
 

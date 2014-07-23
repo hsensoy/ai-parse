@@ -21,6 +21,7 @@
 
 struct vector {
     size_t n;
+    size_t last_idx;
     float* data;
 };
 
@@ -50,14 +51,17 @@ void vprint(vector v);
 
 vector vlinear(vector target, vector src);
 vector vquadratic(vector target, vector src, float d);
+vector vcubic(vector target, vector src, size_t length);
 
 /**
  * @brief Vector concatenation like np.concatenate
  * @param target 
  * @param v
- * @return vector of true_n = target->true_n + v->true_n aligned to 32 bytes
+ * @return vector of true_n = target->true_n + v->true_n aligned to 64 bytes
  */
 vector vconcat(vector target, const vector v);
+
+vector vconcat_arr(vector target, size_t n, const float arr[]);
 
 /**
  * 
